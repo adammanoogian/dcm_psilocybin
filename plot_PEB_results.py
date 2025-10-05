@@ -345,7 +345,10 @@ class PEBDataLoader:
             pnames = model_data['Pnames']
         
         if pnames is not None:
-            return PEBDataLoader.reshape_with_parameter_names(roi_n, cov_n, Ep, Pp, pnames)
+            Ep_reshaped, Pp_reshaped, param_n_full, estimated_indices = PEBDataLoader.reshape_with_parameter_names(roi_n, cov_n, Ep, Pp, pnames)
+            # Store estimated indices for template overlay
+            PEBDataLoader._estimated_indices = estimated_indices
+            return Ep_reshaped, Pp_reshaped, param_n_full
         else:
             # Fallback: assume connections are in row-major order for active connections only
             print("Warning: No parameter names found, using fallback method for constrained model")
@@ -355,6 +358,7 @@ class PEBDataLoader:
     def reshape_with_parameter_names(roi_n, cov_n, Ep, Pp, pnames):
         """
         Use parameter names to map constrained connections to full connectivity matrix.
+        Returns the reshaped matrices and the indices of estimated connections.
         """
         param_n_actual = len(Ep) // cov_n
         
@@ -364,6 +368,9 @@ class PEBDataLoader:
         # Initialize full connectivity matrices
         Ep_reshaped = np.zeros((roi_n, roi_n, cov_n))
         Pp_reshaped = np.zeros((roi_n, roi_n, cov_n))
+        
+        # Track which connections were actually estimated
+        estimated_connections = []
         
         # Map constrained parameters to full matrix
         for i_cov in range(cov_n):
@@ -379,8 +386,19 @@ class PEBDataLoader:
                         param_idx = start_idx + i_param
                         Ep_reshaped[row_idx, col_idx, i_cov] = Ep[param_idx]
                         Pp_reshaped[row_idx, col_idx, i_cov] = Pp[param_idx]
+                        
+                        # Store this connection as estimated (only once)
+                        if (row_idx, col_idx) not in estimated_connections:
+                            estimated_connections.append((row_idx, col_idx))
         
-        return Ep_reshaped, Pp_reshaped, roi_n * roi_n  # Return full param_n for consistency
+        # Convert to indices format for template overlay
+        if estimated_connections:
+            rows, cols = zip(*estimated_connections)
+            estimated_indices = (np.array(rows), np.array(cols))
+        else:
+            estimated_indices = (np.array([]), np.array([]))
+        
+        return Ep_reshaped, Pp_reshaped, roi_n * roi_n, estimated_indices
     
     @staticmethod
     def reshape_constrained_fallback(roi_n, cov_n, Ep, Pp, param_n_actual):
@@ -544,35 +562,38 @@ class PEBPlotter:
         
         # A_constrained models for behavioral associations
         if peb_type == 'behav_associations':
-            # For A_constrained models: try to use template from corresponding 'change' file
-            # or use the available connectivity pattern from current model
-            
-            # Try to find corresponding change file
-            mat_file_path_template = None
-            if "Aconstrained" in self.mat_file_path:
-                mat_file_path_template = self.mat_file_path.replace("Aconstrained", "")
-                if not os.path.isfile(mat_file_path_template):
-                    mat_file_path_template = None
-            
-            if mat_file_path_template and os.path.isfile(mat_file_path_template):
-                # Use change file template if available
-                try:
-                    template_Ep = Ep[:, :, 1] if Ep.shape[2] > 1 else Ep[:, :, 0]
-                    template_indices = np.where(~np.isnan(template_Ep) & (template_Ep != 0))
-                except IndexError:
-                    # Fallback: use any non-zero connections in current model
-                    template_indices = np.where(np.any(Ep != 0, axis=2))
+            # Use the estimated connection indices from the constrained model reshaping
+            if hasattr(PEBDataLoader, '_estimated_indices') and PEBDataLoader._estimated_indices[0].size > 0:
+                # Use the connections that were actually estimated during reshaping
+                template_indices = PEBDataLoader._estimated_indices
+                print(f"Debug: Using {len(template_indices[0])} estimated connections for template overlay")
             else:
-                # Fallback: use any non-zero connections in current model
-                print("Warning: No corresponding change file found, using current model connectivity pattern")
-                template_indices = np.where(np.any(Ep != 0, axis=2))
+                # Fallback methods for finding active connections
+                # Try to find corresponding change file
+                mat_file_path_template = None
+                if "Aconstrained" in self.mat_file_path:
+                    mat_file_path_template = self.mat_file_path.replace("Aconstrained", "")
+                    if not os.path.isfile(mat_file_path_template):
+                        mat_file_path_template = None
+                
+                if mat_file_path_template and os.path.isfile(mat_file_path_template):
+                    # Use change file template if available
+                    try:
+                        template_Ep = Ep[:, :, 1] if Ep.shape[2] > 1 else Ep[:, :, 0]
+                        template_indices = np.where(~np.isnan(template_Ep) & (template_Ep != 0))
+                    except IndexError:
+                        # Fallback: use any non-zero connections in current model
+                        template_indices = np.where(np.any(Ep != 0, axis=2))
+                else:
+                    # Final fallback: use any non-zero connections in current model
+                    print("Warning: Using fallback method - connections with template boxes may not match exactly")
+                    template_indices = np.where(np.any(Ep != 0, axis=2))
             
-            # Create rectangles for each non-NaN connection
-            rects = []
-            for row, col in zip(template_indices[0], template_indices[1]):
-                rect = plt.Rectangle((col, row), 1, 1, fill=False, edgecolor='black',
-                                    linestyle='dotted', linewidth=2)
-                rects.append(rect)
+            # Debug output
+            non_zero_all = np.where(np.any(Ep != 0, axis=2))
+            print(f"Debug: {len(template_indices[0])} connections with boxes, {len(non_zero_all[0])} with values")
+            
+            # Store template indices for subplot overlays
 
 
 
@@ -609,8 +630,11 @@ class PEBPlotter:
             colors = np.vstack([cold_colors, hot_colors])
             cmap = LinearSegmentedColormap.from_list('matlab_custom', colors)
             # if A_constrained and behav_associations, shade in template indices
-            if self.data.get('peb_type') == 'behav_associations' and 'rects' in locals():
-                for rect in rects:
+            if self.data.get('peb_type') == 'behav_associations' and 'template_indices' in locals():
+                # Create new rectangles for this subplot (matplotlib patches can't be reused)
+                for row, col in zip(template_indices[0], template_indices[1]):
+                    rect = plt.Rectangle((col, row), 1, 1, fill=False, edgecolor='black',
+                                        linestyle='dotted', linewidth=2)
                     ax.add_patch(rect)
             # Custom colormap for "Change toward 0" plot
             if (cov_names and len(cov_names) > i_cov and cov_names[i_cov] == 'Change toward 0'):
