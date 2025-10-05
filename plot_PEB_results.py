@@ -742,16 +742,41 @@ def run_peb_plot(
         mat_files = [os.path.join(mat_file, f) for f in os.listdir(mat_file) if f.lower().endswith('.mat')]
         if not mat_files:
             raise FileNotFoundError("No .mat files found in the provided directory.")
-        for mat_path in mat_files:
-            print(f"Processing file: {mat_path}")
-            loader = PEBDataLoader(mat_path, params)
-            peb_data = loader.get_data()
-            plotter = PEBPlotter(peb_data, mat_path, params)
-            plotter.plot_heatmaps()
-            if save:
-                plotter.save_all_svgs(output_dir=output_dir)
-            if show:
-                plotter.show_all()
+        
+        print(f"\n🔍 Found {len(mat_files)} .mat files to process")
+        print("=" * 80)
+        
+        successful = 0
+        failed = 0
+        
+        for i, mat_path in enumerate(mat_files, 1):
+            filename = os.path.basename(mat_path)
+            print(f"\n[{i}/{len(mat_files)}] Processing: {filename}")
+            print("-" * 60)
+            
+            try:
+                loader = PEBDataLoader(mat_path, params)
+                peb_data = loader.get_data()
+                plotter = PEBPlotter(peb_data, mat_path, params)
+                plotter.plot_heatmaps()
+                if save:
+                    plotter.save_all_svgs(output_dir=output_dir)
+                if show:
+                    plotter.show_all()
+                print(f"✅ Successfully processed: {filename}")
+                successful += 1
+                
+            except Exception as e:
+                print(f"❌ Failed to process {filename}: {str(e)}")
+                failed += 1
+                continue
+        
+        print("\n" + "=" * 80)
+        print(f"📊 Batch processing complete!")
+        print(f"✅ Successful: {successful}")
+        print(f"❌ Failed: {failed}")
+        print(f"📁 Output directory: {output_dir}")
+        print("=" * 80)
     else:
         loader = PEBDataLoader(mat_file, params)
         peb_data = loader.get_data()
@@ -767,8 +792,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Plot PEB results from a MATLAB .mat file.")
-    #parser.add_argument("--mat_file", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\massive_output_local\\adam_m6\\PEB_change_-ses-01-ses-02_-task-rest_cov-_noFD.mat", help="Path to the PEB .mat file or directory")
-    parser.add_argument("--mat_file", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\massive_output_local\\adam_m6\\PEB_behav_associations_-ses-02_-task-rest_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_Aconstrained_noFD.mat", help="Path to the PEB .mat file or directory")
+    parser.add_argument("--mat_file", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\massive_output_local\\adam_m6", help="Path to the PEB .mat file or directory")
     parser.add_argument("--output_dir", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\plots", help="Directory to save SVG plots (default: alongside .mat file)")
     parser.add_argument("--no-show", action="store_true", help="Do not display plots interactively")
     parser.add_argument("--no-save", action="store_true", help="Do not save SVG plots")
