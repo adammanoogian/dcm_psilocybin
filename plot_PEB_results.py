@@ -700,7 +700,8 @@ class PEBPlotter:
             ax.set_xlabel("From", fontsize=font_size)
             ax.set_ylabel("To", fontsize=font_size)
             plt.xticks(rotation=30)
-            plt.tight_layout()
+            plt.tight_layout(pad=0.2)
+            plt.subplots_adjust(left=0.05, right=0.98, top=0.95, bottom=0.08)
             self.figures.append(fig)
             self.covariate_names.append(covariate_name)
 
@@ -719,7 +720,7 @@ class PEBPlotter:
             else:
                 file_name = f"{base_name}.svg"
             output_path = os.path.join(output_dir, file_name)
-            fig.savefig(output_path, format='svg')
+            fig.savefig(output_path, format='svg', bbox_inches='tight', pad_inches=0.02)
             print(f"Plot saved to: {output_path}")
 
     def show_all(self):

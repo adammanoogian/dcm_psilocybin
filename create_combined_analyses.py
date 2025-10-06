@@ -26,8 +26,9 @@ def create_condition_figures():
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     
-    # Initialize SVG combiner
-    combiner = SVGCombiner(spacing=0, background_color='white')
+    # Initialize SVG combiner with negative spacing to overlap figures slightly
+    # This eliminates white space between panels
+    combiner = SVGCombiner(spacing=-180, background_color='white')
     
     # Define conditions and their corresponding file patterns
     conditions = ['rest', 'movie', 'meditation', 'music']
@@ -89,6 +90,80 @@ def create_condition_figures():
     
     print(f"\n🎉 Combined figures saved to: {output_dir}")
     return output_dir
+
+def convert_to_png(dpi=300):
+    """
+    Convert combined SVG files to PNG format using Inkscape CLI.
+    
+    Parameters:
+    -----------
+    dpi : int
+        Resolution for PNG output (default: 300 for publication quality)
+    """
+    import subprocess
+    
+    output_dir = "C:/Users/aman0087/Documents/Github/dcm_psilocybin/plots/combined_analyses"
+    conditions = ['rest', 'movie', 'meditation', 'music']
+    
+    print(f"\n🖼️  Converting SVG files to PNG (DPI: {dpi})")
+    print("=" * 80)
+    
+    # Try to use Inkscape CLI
+    try:
+        # Test if Inkscape is available
+        result = subprocess.run(['inkscape', '--version'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            print("✅ Using Inkscape CLI for conversion...")
+            
+            success_count = 0
+            for condition in conditions:
+                svg_file = os.path.join(output_dir, f"combined_PEB_analysis_{condition}.svg")
+                png_file = os.path.join(output_dir, f"combined_PEB_analysis_{condition}.png")
+                
+                if os.path.exists(svg_file):
+                    try:
+                        print(f"  🔄 Converting {condition}.svg...")
+                        result = subprocess.run([
+                            'inkscape',
+                            '--export-type=png',
+                            f'--export-dpi={dpi}',
+                            f'--export-filename={png_file}',
+                            svg_file
+                        ], check=True, capture_output=True, text=True, timeout=30)
+                        
+                        if os.path.exists(png_file):
+                            file_size = os.path.getsize(png_file) / (1024 * 1024)  # MB
+                            print(f"  ✅ {condition}.svg → {condition}.png ({file_size:.1f} MB)")
+                            success_count += 1
+                        else:
+                            print(f"  ❌ Failed to create {condition}.png")
+                    except subprocess.TimeoutExpired:
+                        print(f"  ❌ Timeout converting {condition}")
+                    except subprocess.CalledProcessError as e:
+                        print(f"  ❌ Failed: {condition} - {e.stderr if e.stderr else 'unknown error'}")
+                else:
+                    print(f"  ⚠️  File not found: {condition}.svg")
+            
+            if success_count > 0:
+                print(f"\n✨ Successfully converted {success_count}/{len(conditions)} files to PNG!")
+                print(f"📂 PNG files saved to: {output_dir}")
+                return True
+            else:
+                print(f"\n❌ No files were converted successfully")
+                return False
+    
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        print("❌ Inkscape not found in PATH")
+        print("\n📝 Manual conversion instructions:")
+        print("\n  Option 1: Install Inkscape and add to PATH")
+        print("    Download from: https://inkscape.org/")
+        print("\n  Option 2: Run these commands manually:")
+        for condition in conditions:
+            svg_file = os.path.join(output_dir, f"combined_PEB_analysis_{condition}.svg")
+            png_file = os.path.join(output_dir, f"combined_PEB_analysis_{condition}.png")
+            print(f'    inkscape --export-type=png --export-dpi={dpi} --export-filename="{png_file}" "{svg_file}"')
+        return False
 
 def list_available_files():
     """
@@ -156,6 +231,9 @@ def main():
     print("  - combined_PEB_analysis_movie.svg") 
     print("  - combined_PEB_analysis_meditation.svg")
     print("  - combined_PEB_analysis_music.svg")
+    
+    # Convert SVGs to PNG
+    convert_to_png(dpi=300)
     
     print("\n📄 To convert to PDF using Inkscape:")
     output_dir = "C:/Users/aman0087/Documents/Github/dcm_psilocybin/plots/combined_analyses"
