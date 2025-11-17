@@ -1,0 +1,260 @@
+# Hypothesis-Driven Visualization Configuration
+# Maps paper hypotheses to DCM connectivity visualizations
+#
+# Usage (from project root):
+#   python scripts/analysis/generate_paper_figures.py --config scripts/analysis/config/hypothesis_config.yaml
+#
+# Each hypothesis specifies:
+#   - Paper section reference
+#   - DCM analysis file
+#   - Visualization parameters
+#   - Output figure path
+
+project:
+  name: "Psilocybin DCM Connectivity Analysis"
+  paper_title: "Effects of Psilocybin on Brain Connectivity"
+  output_dir: "figures/nilearn"
+  data_dir: "massive_output_local/adam_m6"
+
+# Global visualization defaults
+defaults:
+  pp_threshold: 0.99
+  strength_threshold: 0.0
+  edge_threshold: "90%"
+  node_size: 60
+  dpi: 300
+  colorbar: true
+  colorbar_label: "PEB Parameter Estimate (Ep)"  # Beta coefficients from DCM
+  edge_cmap: "RdBu_r"  # Red for positive, Blue for negative
+
+hypotheses:
+  # ===========================================================================
+  # HYPOTHESIS 1: dlPFC Top-Down Control
+  # ===========================================================================
+  - id: H1
+    name: "dlPFC Top-Down Control"
+    paper_section: "3.2.1"
+    description: |
+      Psilocybin decreases top-down inhibitory control from the dorsolateral
+      prefrontal cortex (dlPFC) to subcortical and posterior regions, consistent
+      with the relaxed beliefs under psychedelics (REBUS) model.
+
+    analysis_type: "session_change"
+    mat_file: "PEB_change_-ses-01-ses-02_-task-rest_cov-_noFD.mat"
+
+    visualization:
+      source_regions: ["Frontal_Mid_L", "Frontal_Mid_R"]
+      target_regions: []  # All targets
+      connection_type: "outgoing"
+      strength_threshold: 0.05
+      edge_threshold: "0%"  # Show ALL connections (no percentile filtering)
+      edge_cmap: "RdBu_r"
+      display_mode: "glass"
+      node_size: 70
+      title: "dlPFC Outgoing Connectivity Changes"
+      colorbar_label: "Δ Connection Strength (Session 2 - Session 1)"
+      output: "H1_dlpfc_topdown_control.png"
+
+    expected_pattern:
+      - "Decreased connectivity from dlPFC to hippocampus"
+      - "Decreased connectivity from dlPFC to thalamus"
+      - "Negative parameter estimates (weakened top-down influence)"
+
+  # ===========================================================================
+  # HYPOTHESIS 2: Hippocampal Memory Network
+  # ===========================================================================
+  - id: H2
+    name: "Hippocampal Memory Network Modulation"
+    paper_section: "3.2.2"
+    description: |
+      Psilocybin modulates hippocampal connectivity patterns, particularly
+      affecting memory consolidation and retrieval networks during the
+      acute psychedelic state.
+
+    analysis_type: "session_change"
+    mat_file: "PEB_change_-ses-01-ses-02_-task-rest_cov-_noFD.mat"
+
+    visualization:
+      source_regions: ["Hippocampus"]
+      target_regions: []
+      connection_type: "bidirectional"
+      strength_threshold: 0.05
+      edge_cmap: "RdBu_r"
+      display_mode: "lyrz"
+      node_size: 80
+      title: "Hippocampal Network Connectivity Changes"
+      colorbar_label: "Δ Connection Strength (Session 2 - Session 1)"
+      output: "H2_hippocampus_memory_network.pdf"
+
+    expected_pattern:
+      - "Altered hippocampal-cortical connectivity"
+      - "Changed bidirectional communication with parahippocampal regions"
+
+  # ===========================================================================
+  # HYPOTHESIS 3: Task-Specific Effects (Music vs Movie)
+  # ===========================================================================
+  - id: H3a
+    name: "Music Task Frontal-Thalamic Connectivity"
+    paper_section: "3.3.1"
+    description: |
+      During music listening under psilocybin, frontal-thalamic connectivity
+      patterns reflect altered auditory processing and emotional engagement.
+
+    analysis_type: "task_contrast"
+    mat_file: "PEB_contrast_-ses-02_-task-music-task-movie_cov-_noFD.mat"
+
+    visualization:
+      source_regions: ["Frontal_Mid", "Thalamus"]
+      target_regions: []
+      connection_type: "outgoing"
+      strength_threshold: 0.05
+      edge_cmap: "RdBu_r"
+      display_mode: "glass"
+      node_size: 70
+      title: "Music vs Movie: Frontal-Thalamic Connectivity"
+      colorbar_label: "Δ Connectivity (Music - Movie)"
+      output: "H3a_music_frontal_thalamic.pdf"
+
+    expected_pattern:
+      - "Enhanced frontal involvement during music"
+      - "Altered thalamic relay patterns"
+
+  - id: H3b
+    name: "Meditation Task Attentional Networks"
+    paper_section: "3.3.2"
+    description: |
+      Meditation under psilocybin shows unique patterns of attentional network
+      engagement, particularly involving prefrontal control regions.
+
+    analysis_type: "session_change"
+    mat_file: "PEB_change_-ses-01-ses-02_-task-meditation_cov-_noFD.mat"
+
+    visualization:
+      source_regions: ["Frontal_Mid"]
+      target_regions: []
+      connection_type: "outgoing"
+      strength_threshold: 0.08
+      edge_cmap: "RdBu_r"
+      display_mode: "ortho"
+      node_size: 75
+      title: "Meditation Task: Prefrontal Outgoing Connectivity"
+      colorbar_label: "Δ Connection Strength (Session 2 - Session 1)"
+      output: "H3b_meditation_attention.pdf"
+
+    expected_pattern:
+      - "dlPFC connectivity modulation during focused attention"
+      - "Altered top-down control during meditative states"
+
+  # ===========================================================================
+  # HYPOTHESIS 4: ASC Behavioral Correlations
+  # ===========================================================================
+  - id: H4a
+    name: "Sensory Experience Correlations"
+    paper_section: "3.4.1"
+    description: |
+      Individual differences in altered states of consciousness (ASC) scores,
+      particularly sensory-related subscales, correlate with specific
+      connectivity changes.
+
+    analysis_type: "behavioral_association"
+    mat_file: "PEB_behav_associations_-ses-02_-task-rest_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_noFD.mat"
+
+    visualization:
+      source_regions: []  # All regions
+      target_regions: []
+      connection_type: "bidirectional"
+      strength_threshold: 0.1
+      edge_cmap: "RdBu_r"
+      display_mode: "lyrz"
+      node_size: 65
+      title: "ASC Sensory Scale - Connectivity Correlations"
+      colorbar_label: "β Coefficient (ASC Sensory Association)"
+      output: "H4a_asc_sensory_correlations.pdf"
+
+    expected_pattern:
+      - "Stronger sensory experiences correlate with specific connectivity patterns"
+      - "Individual variability in psychedelic response"
+
+  - id: H4b
+    name: "Auditory Experience Correlations"
+    paper_section: "3.4.2"
+    description: |
+      ASC auditory subscale scores during music task correlate with
+      auditory processing network connectivity.
+
+    analysis_type: "behavioral_association"
+    mat_file: "PEB_behav_associations_-ses-02_-task-music_cov-ASC5_AUDITORY_noFD.mat"
+
+    visualization:
+      source_regions: []
+      target_regions: []
+      connection_type: "bidirectional"
+      strength_threshold: 0.1
+      edge_cmap: "RdBu_r"
+      display_mode: "lyrz"
+      node_size: 65
+      title: "ASC Auditory Scale - Music Task Correlations"
+      colorbar_label: "β Coefficient (ASC Auditory Association)"
+      output: "H4b_asc_auditory_music.pdf"
+
+    expected_pattern:
+      - "Auditory experience intensity correlates with connectivity"
+      - "Music task amplifies auditory network effects"
+
+  # ===========================================================================
+  # HYPOTHESIS 5: Task Contrasts (Rest vs Active)
+  # ===========================================================================
+  - id: H5
+    name: "Rest vs Music Task Differences"
+    paper_section: "3.5"
+    description: |
+      Comparing resting state with music listening reveals task-dependent
+      modulation of connectivity under psilocybin.
+
+    analysis_type: "task_contrast"
+    mat_file: "PEB_contrast_-ses-02_-task-rest-task-music_cov-_noFD.mat"
+
+    visualization:
+      source_regions: []
+      target_regions: []
+      connection_type: "bidirectional"
+      strength_threshold: 0.05
+      edge_cmap: "RdBu_r"
+      display_mode: "glass"
+      node_size: 65
+      title: "Rest vs Music: Global Connectivity Differences"
+      colorbar_label: "Δ Connectivity (Rest - Music)"
+      output: "H5_rest_vs_music_global.pdf"
+
+    expected_pattern:
+      - "Music engages additional auditory/emotional networks"
+      - "Task demands modulate psychedelic effects"
+
+# =============================================================================
+# Comparison Figures (Multiple hypotheses combined)
+# =============================================================================
+comparisons:
+  - id: COMP1
+    name: "Cross-Task dlPFC Comparison"
+    paper_section: "4.1"
+    description: "Compare dlPFC outgoing connectivity across all tasks"
+    hypotheses_to_compare: ["H1", "H3b"]
+    layout: "side_by_side"
+    output: "COMP1_dlpfc_across_tasks.pdf"
+
+  - id: COMP2
+    name: "Behavioral Correlations Overview"
+    paper_section: "4.2"
+    description: "Summary of ASC subscale correlations with connectivity"
+    hypotheses_to_compare: ["H4a", "H4b"]
+    layout: "grid"
+    output: "COMP2_behavioral_correlations.pdf"
+
+# =============================================================================
+# Figure Metadata for Paper
+# =============================================================================
+figure_metadata:
+  caption_prefix: "Figure"
+  cite_key: "fig:{output_name}"
+  latex_width: "\\textwidth"
+  latex_position: "htbp"
