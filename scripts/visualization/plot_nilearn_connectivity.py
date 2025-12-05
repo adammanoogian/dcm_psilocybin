@@ -16,10 +16,20 @@ from typing import List, Tuple, Optional, Dict
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for reliable file saving
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+# Create custom green-purple colormap for "change toward zero" analysis
+# Green = connection moved closer to zero (weakening)
+# Purple = connection moved further from zero (strengthening)
+GREEN_PURPLE_CMAP = LinearSegmentedColormap.from_list(
+    'green_purple',
+    [(0.2, 0.7, 0.2), (1, 1, 1), (0.6, 0.2, 0.8)],  # Green → White → Purple
+    N=256
+)
 
 # Import existing data loader from project root
 from plot_PEB_results import PEBDataLoader
@@ -277,15 +287,13 @@ class NilearnConnectivityVisualizer:
                         mask[tgt_idx, src_idx] = True
 
         elif connection_type == 'bidirectional':
+            # Bidirectional: connections from source to target AND from target to source
             for src_idx in source_indices:
-                for tgt_idx in range(n_rois):
+                for tgt_idx in target_indices:
                     if src_idx != tgt_idx:
+                        # Source -> Target
                         mask[tgt_idx, src_idx] = True
-                        mask[src_idx, tgt_idx] = True
-            for tgt_idx in target_indices:
-                for src_idx in range(n_rois):
-                    if src_idx != tgt_idx:
-                        mask[tgt_idx, src_idx] = True
+                        # Target -> Source (bidirectional)
                         mask[src_idx, tgt_idx] = True
 
         # Apply mask
@@ -354,8 +362,8 @@ class NilearnConnectivityVisualizer:
 
         print(f"\nCreating {display_mode} view...")
 
-        # Create figure with extra space for labels
-        fig = plt.figure(figsize=(14, 9))
+        # Create figure with extra space for labels - wider for better brain visibility
+        fig = plt.figure(figsize=(18, 10))
 
         # IMPORTANT: Matrix convention for nilearn
         # MATLAB DCM convention: Ep[i,j] = FROM j TO i (rows=targets, cols=sources)
@@ -534,6 +542,336 @@ class NilearnConnectivityVisualizer:
         plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.3)
         plt.close()
         print(f"  ✓ Saved!")
+
+    def plot_overlay_connectome(
+        self,
+        connectivity_matrices: List[np.ndarray],
+        node_coords: np.ndarray,
+        output_file: str,
+        condition_names: List[str],
+        title: str = "Multi-Condition Connectivity Overlay",
+        edge_threshold: str = "0%",
+        node_size: float = 80,
+        edge_cmaps: List[str] = None,
+        display_mode: str = 'lyrz',
+        colorbar: bool = False,
+        roi_names: List[str] = None,
+        subtitle: str = None,
+        radiological: bool = False,
+        edge_alpha: float = 0.6,
+        edge_linewidth: float = 2
+    ):
+        """
+        Overlay multiple connectivity matrices with different colors on same brain.
+
+        Uses nilearn's add_graph() method to overlay conditions with semi-transparent edges.
+        Edges will overlap but use different colormaps for visual distinction.
+
+        Parameters
+        ----------
+        connectivity_matrices : List[np.ndarray]
+            List of connectivity matrices to overlay
+        node_coords : np.ndarray
+            Node coordinates (shared across conditions)
+        output_file : str
+            Output file path
+        condition_names : List[str]
+            Names of conditions (e.g., ['Rest', 'Music', 'Movie', 'Meditation'])
+        title : str
+            Plot title
+        edge_threshold : str or float
+            Edge threshold (e.g., '0%' shows all connections)
+        node_size : float
+            Node size
+        edge_cmaps : List[str], optional
+            Colormaps for each condition. If None, uses ['Reds', 'Blues', 'Greens', 'Purples']
+        display_mode : str
+            Display mode: 'lyrz', 'ortho', 'x', 'y', 'z'
+        colorbar : bool
+            Show colorbar (typically False for overlays)
+        roi_names : list of str, optional
+            Region names for labeling
+        subtitle : str, optional
+            Additional metadata to show below title
+        radiological : bool
+            Radiological view (left on left)
+        edge_alpha : float
+            Edge transparency (0-1, default 0.6)
+        edge_linewidth : float
+            Edge line width (default 2)
+        """
+        from nilearn import plotting
+        from matplotlib.patches import Patch
+
+        # Default colormaps if not provided
+        if edge_cmaps is None:
+            edge_cmaps = ['Reds', 'Blues', 'Greens', 'Purples', 'Oranges', 'RdPu']
+
+        # Ensure we have enough colormaps
+        if len(edge_cmaps) < len(connectivity_matrices):
+            edge_cmaps = edge_cmaps * (len(connectivity_matrices) // len(edge_cmaps) + 1)
+
+        print(f"\nCreating overlay {display_mode} view for {len(connectivity_matrices)} conditions...")
+
+        # Create figure
+        fig = plt.figure(figsize=(18, 10))
+
+        # Plot first condition
+        print(f"  Adding condition 1: {condition_names[0]}...")
+        connectivity_nilearn_0 = connectivity_matrices[0].T  # MATLAB→nilearn convention
+
+        # Create explicit node colors that match our legend
+        from matplotlib import cm
+        if roi_names is not None:
+            node_cmap = cm.get_cmap('tab10')
+            node_colors = [node_cmap(i % 10) for i in range(len(roi_names))]
+        else:
+            node_colors = 'auto'
+
+        display = plotting.plot_connectome(
+            connectivity_nilearn_0,
+            node_coords,
+            edge_threshold=edge_threshold,
+            node_size=node_size,
+            edge_cmap=edge_cmaps[0],
+            display_mode=display_mode,
+            colorbar=colorbar,
+            figure=fig,
+            node_color=node_colors,
+            radiological=radiological,
+            edge_kwargs={'alpha': edge_alpha, 'linewidth': edge_linewidth}
+        )
+
+        # Overlay additional conditions using add_graph()
+        for i in range(1, len(connectivity_matrices)):
+            print(f"  Adding condition {i+1}: {condition_names[i]}...")
+            connectivity_nilearn_i = connectivity_matrices[i].T  # MATLAB→nilearn convention
+
+            display.add_graph(
+                connectivity_nilearn_i,
+                node_coords,
+                edge_threshold=edge_threshold,
+                node_size=node_size,
+                edge_cmap=edge_cmaps[i],
+                edge_kwargs={'alpha': edge_alpha, 'linewidth': edge_linewidth}
+            )
+
+        # Add title and subtitle
+        if subtitle:
+            fig.suptitle(f"{title}\n{subtitle}", fontsize=14, fontweight='bold', y=0.98)
+        else:
+            plt.suptitle(title, fontsize=16, fontweight='bold')
+
+        # Add custom legend for conditions (showing edge colors)
+        legend_handles = []
+        for i, name in enumerate(condition_names):
+            # Get representative color from colormap
+            cmap = cm.get_cmap(edge_cmaps[i])
+            color = cmap(0.7)  # Use upper range of colormap
+            legend_handles.append(Patch(facecolor=color, label=name, alpha=edge_alpha))
+
+        # Add condition legend
+        fig.legend(handles=legend_handles, loc='upper right', ncol=1,
+                  fontsize=10, frameon=True, title='Conditions', title_fontsize=11,
+                  bbox_to_anchor=(0.98, 0.95))
+
+        # Add node legend if roi_names provided (bottom)
+        if roi_names is not None and len(roi_names) <= 15:
+            node_legend_handles = []
+            for i, name in enumerate(roi_names):
+                short_name = name.replace('_L', ' L').replace('_R', ' R')
+                node_legend_handles.append(Patch(facecolor=node_colors[i], label=short_name))
+
+            fig.legend(handles=node_legend_handles, loc='lower center', ncol=min(5, len(roi_names)),
+                      fontsize=8, frameon=True, title='Brain Regions', title_fontsize=9,
+                      bbox_to_anchor=(0.5, -0.02))
+
+        plt.tight_layout()
+
+        # Save
+        print(f"  Saving to {output_file}...")
+        plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.3)
+        plt.close()
+        print(f"  ✓ Saved!")
+
+    def plot_sidebyside_connectome(
+        self,
+        connectivity_matrices: List[np.ndarray],
+        node_coords: np.ndarray,
+        output_file: str,
+        condition_names: List[str],
+        title: str = "Multi-Condition Connectivity Comparison",
+        edge_threshold: str = "0%",
+        node_size: float = 70,
+        edge_cmap: str = 'coolwarm',
+        colorbar: bool = True,
+        roi_names: List[str] = None,
+        subtitle: str = None,
+        radiological: bool = False,
+        colorbar_label: str = None
+    ):
+        """
+        Create side-by-side panel comparison of multiple conditions.
+
+        Each condition gets its own brain view in a grid layout.
+        Clean, publication-ready approach for comparing conditions.
+
+        Parameters
+        ----------
+        connectivity_matrices : List[np.ndarray]
+            List of connectivity matrices to compare
+        node_coords : np.ndarray
+            Node coordinates (shared across conditions)
+        output_file : str
+            Output file path
+        condition_names : List[str]
+            Names of conditions (e.g., ['Rest', 'Music', 'Movie', 'Meditation'])
+        title : str
+            Main plot title
+        edge_threshold : str or float
+            Edge threshold
+        node_size : float
+            Node size
+        edge_cmap : str
+            Colormap for edges (shared across all panels)
+        colorbar : bool
+            Show colorbar
+        roi_names : list of str, optional
+            Region names for labeling
+        subtitle : str, optional
+            Additional metadata
+        radiological : bool
+            Radiological view (left on left)
+        colorbar_label : str, optional
+            Custom label for colorbar (overrides automatic label)
+        """
+        from nilearn import plotting
+        import matplotlib.gridspec as gridspec
+
+        n_conditions = len(connectivity_matrices)
+
+        # Determine grid layout
+        if n_conditions <= 2:
+            nrows, ncols = 1, n_conditions
+            figsize = (18, 8)
+        elif n_conditions <= 4:
+            nrows, ncols = 2, 2
+            figsize = (20, 16)
+        else:
+            nrows = (n_conditions + 2) // 3
+            ncols = 3
+            figsize = (24, 8 * nrows)
+
+        print(f"\nCreating side-by-side comparison with {n_conditions} conditions...")
+        print(f"  Layout: {nrows}x{ncols} grid")
+
+        # Create figure with gridspec
+        fig = plt.figure(figsize=figsize)
+        gs = gridspec.GridSpec(nrows, ncols, figure=fig,
+                              hspace=0.15, wspace=0.1,
+                              top=0.92, bottom=0.08)
+
+        # Find global min/max for consistent colormapping
+        all_values = np.concatenate([mat[mat != 0] for mat in connectivity_matrices])
+
+        if len(all_values) == 0:
+            # No connections in any condition - use default range
+            vmin, vmax = -0.1, 0.1
+            print(f"  No connections found in any condition - using default range")
+        else:
+            vmin, vmax = all_values.min(), all_values.max()
+            # Make symmetric around zero for diverging colormaps
+            abs_max = max(abs(vmin), abs(vmax))
+            vmin, vmax = -abs_max, abs_max
+            print(f"  Value range: [{vmin:.3f}, {vmax:.3f}]")
+
+        # Plot each condition in its own subplot
+        for idx, (conn_matrix, cond_name) in enumerate(zip(connectivity_matrices, condition_names)):
+            row = idx // ncols
+            col = idx % ncols
+
+            print(f"  Panel {idx+1}: {cond_name} (row {row}, col {col})...")
+
+            # Create subplot for this condition
+            ax = fig.add_subplot(gs[row, col])
+
+            # MATLAB→nilearn convention
+            connectivity_nilearn = conn_matrix.T
+
+            # Handle custom colormaps
+            if edge_cmap == 'green_purple':
+                cmap_to_use = GREEN_PURPLE_CMAP
+            else:
+                cmap_to_use = edge_cmap
+
+            # Plot connectome
+            display = plotting.plot_connectome(
+                connectivity_nilearn,
+                node_coords,
+                edge_threshold=edge_threshold,
+                node_size=node_size,
+                edge_cmap=cmap_to_use,
+                display_mode='z',  # Axial view for panels
+                colorbar=False,  # Add single shared colorbar later
+                figure=fig,
+                axes=ax,
+                radiological=radiological,
+                edge_vmin=vmin,
+                edge_vmax=vmax,
+                annotate=True,
+                node_kwargs={'alpha': 0.8}
+            )
+
+            # Increase L/R annotation font size by 20% (from default ~10 to 12)
+            for txt in ax.texts:
+                if txt.get_text() in ['L', 'R']:
+                    current_size = txt.get_fontsize()
+                    txt.set_fontsize(current_size * 1.2)
+
+            # Add subplot title
+            ax.set_title(cond_name, fontsize=20, fontweight='bold', pad=10)
+
+        # Add main title (ignore subtitle for cleaner appearance)
+        fig.suptitle(title, fontsize=24, fontweight='bold', y=0.98)
+
+        # Add single shared colorbar
+        if colorbar:
+            from matplotlib import cm
+            from matplotlib.colors import Normalize
+
+            # Create colorbar axes
+            cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+
+            # Handle custom colormaps
+            if colorbar_label:
+                # Use custom label if provided
+                cbar_label = colorbar_label
+            elif edge_cmap == 'green_purple':
+                cbar_label = 'Change Magnitude (Hz)'
+            else:
+                cbar_label = 'Δ Connection Strength (Hz)'
+
+            # Get colormap object
+            if edge_cmap == 'green_purple':
+                cmap_obj = GREEN_PURPLE_CMAP
+            else:
+                cmap_obj = cm.get_cmap(edge_cmap)
+
+            norm = Normalize(vmin=vmin, vmax=vmax)
+            sm = cm.ScalarMappable(cmap=cmap_obj, norm=norm)
+            sm.set_array([])
+            cbar = fig.colorbar(sm, cax=cbar_ax)
+            cbar.set_label(cbar_label, rotation=270, labelpad=30, fontsize=20)
+            cbar.ax.tick_params(labelsize=18)  # Increase colorbar tick label size
+
+        # Save as both PNG and SVG
+        print(f"  Saving to {output_file}...")
+        plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.3)
+        # Also save as SVG
+        svg_file = str(output_file).replace('.png', '.svg')
+        plt.savefig(svg_file, format='svg', bbox_inches='tight', pad_inches=0.3)
+        plt.close()
+        print(f"  ✓ Saved PNG and SVG!")
 
 
 def main():

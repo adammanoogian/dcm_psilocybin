@@ -346,9 +346,9 @@ class PEBDataLoader:
         
         if pnames is not None:
             Ep_reshaped, Pp_reshaped, param_n_full, estimated_indices = PEBDataLoader.reshape_with_parameter_names(roi_n, cov_n, Ep, Pp, pnames)
-            # Store estimated indices for template overlay
+            # Store estimated indices for template overlay (in both class var and will return in data dict)
             PEBDataLoader._estimated_indices = estimated_indices
-            return Ep_reshaped, Pp_reshaped, param_n_full
+            return Ep_reshaped, Pp_reshaped, param_n_full, estimated_indices
         else:
             # Fallback: assume connections are in row-major order for active connections only
             print("Warning: No parameter names found, using fallback method for constrained model")
@@ -480,7 +480,14 @@ class PEBPlotter:
 
         # Use simple direct reshaping of the vector data
         roi_n = len(roi_names)
-        Ep, Pp, param_n = PEBDataLoader.reshape_posterior_simple(model, roi_n)
+        result = PEBDataLoader.reshape_posterior_simple(model, roi_n)
+        if len(result) == 4:
+            Ep, Pp, param_n, estimated_indices = result
+            # Store estimated indices in data dict for template overlay
+            self.data['estimated_indices'] = estimated_indices
+        else:
+            Ep, Pp, param_n = result
+            self.data['estimated_indices'] = None
 
         cov_n = Ep.shape[2]  # Third dimension is the number of covariates
 
@@ -563,9 +570,9 @@ class PEBPlotter:
         # A_constrained models for behavioral associations
         if peb_type == 'behav_associations':
             # Use the estimated connection indices from the constrained model reshaping
-            if hasattr(PEBDataLoader, '_estimated_indices') and PEBDataLoader._estimated_indices[0].size > 0:
+            if self.data.get('estimated_indices') is not None and self.data['estimated_indices'][0].size > 0:
                 # Use the connections that were actually estimated during reshaping
-                template_indices = PEBDataLoader._estimated_indices
+                template_indices = self.data['estimated_indices']
                 print(f"Debug: Using {len(template_indices[0])} estimated connections for template overlay")
             else:
                 # Fallback methods for finding active connections
@@ -632,6 +639,9 @@ class PEBPlotter:
             # if A_constrained and behav_associations, shade in template indices
             if self.data.get('peb_type') == 'behav_associations' and 'template_indices' in locals():
                 # Create new rectangles for this subplot (matplotlib patches can't be reused)
+                # template_indices are (row, col) from Ep where Ep[row,col] = FROM col TO row
+                # After data transpose, Ep.T[col,row] is plotted at axes position (x=row, y=col)
+                # So box should be at plt.Rectangle((row, col)) which matches the visual position
                 for row, col in zip(template_indices[0], template_indices[1]):
                     rect = plt.Rectangle((col, row), 1, 1, fill=False, edgecolor='black',
                                         linestyle='dotted', linewidth=2)
@@ -700,7 +710,7 @@ class PEBPlotter:
             title_mapping = {
                 'mean of group 1': 'Pre-Psilocybin',
                 'mean of second group': 'Post-Psilocybin',
-                'Change toward 0': 'Change',
+                'Change toward 0': 'Change (post-psilocybin - pre-psilocybin)',
             }
 
             covariate_name = None
@@ -710,7 +720,7 @@ class PEBPlotter:
                 title = title_mapping.get(covariate_name, covariate_name)
                 # For behavioral associations, use a shorter title
                 if peb_type == 'behav_associations':
-                    title = 'Behavioral'
+                    title = 'Behavioral Correlates: 11D-ASC Component'
             else:
                 title = "Connectivity"
 

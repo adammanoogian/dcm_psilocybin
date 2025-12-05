@@ -66,7 +66,7 @@ def generate_session_change_plots(visualizer, coord_mapper, data_dir, output_dir
 
         node_coords = coord_mapper.get_coordinates(roi_names)
 
-        # Generate full network plot
+        # Generate full network plot - Session change uses coolwarm (diverging, centered at 0)
         output_file = output_dir / f"session_change_{task_name}_full_network.png"
         visualizer.plot_connectome(
             conn_matrix,
@@ -74,8 +74,8 @@ def generate_session_change_plots(visualizer, coord_mapper, data_dir, output_dir
             str(output_file),
             title=f"{task_info['title']} - Session Change",
             edge_threshold='0%',
-            node_size=40,
-            edge_cmap='RdBu_r',
+            node_size=80,  # Larger nodes
+            edge_cmap='coolwarm',  # Diverging colormap for difference
             display_mode='lyrz',
             colorbar=True,
             roi_names=roi_names,
@@ -97,8 +97,8 @@ def generate_session_change_plots(visualizer, coord_mapper, data_dir, output_dir
             str(output_file),
             title=f"{task_info['title']} - dlPFC Outgoing",
             edge_threshold='0%',
-            node_size=50,
-            edge_cmap='RdBu_r',
+            node_size=100,  # Larger nodes
+            edge_cmap='coolwarm',  # Diverging colormap
             display_mode='lyrz',
             colorbar=True,
             roi_names=roi_names,
@@ -120,8 +120,8 @@ def generate_session_change_plots(visualizer, coord_mapper, data_dir, output_dir
             str(output_file),
             title=f"{task_info['title']} - Hippocampus Network",
             edge_threshold='0%',
-            node_size=50,
-            edge_cmap='RdBu_r',
+            node_size=100,  # Larger nodes
+            edge_cmap='coolwarm',  # Diverging colormap
             display_mode='lyrz',
             colorbar=True,
             roi_names=roi_names,
@@ -140,7 +140,7 @@ def generate_behavioral_association_plots(visualizer, coord_mapper, data_dir, ou
     # Define behavioral files to process
     behav_files = {
         'rest_asc_sensory': {
-            'file': 'PEB_behav_associations_-ses-02_-task-rest_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_noFD.mat',
+            'file': 'PEB_behav_associations_-ses-02_-task-rest_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_Aconstrained_noFD.mat',
             'title': 'Rest - ASC Sensory Composite',
             'subtitle': 'Association with Sensory Experience Intensity',
             'covariate': 'ASC Sensory'
@@ -158,14 +158,20 @@ def generate_behavioral_association_plots(visualizer, coord_mapper, data_dir, ou
             'covariate': 'ASC Auditory'
         },
         'music_asc_sensory': {
-            'file': 'PEB_behav_associations_-ses-02_-task-music_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_noFD.mat',
+            'file': 'PEB_behav_associations_-ses-02_-task-music_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_Aconstrained_noFD.mat',
             'title': 'Music - ASC Sensory Composite',
             'subtitle': 'Association with Sensory Experience Intensity',
             'covariate': 'ASC Sensory'
         },
         'movie_asc_sensory': {
-            'file': 'PEB_behav_associations_-ses-02_-task-movie_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_noFD.mat',
+            'file': 'PEB_behav_associations_-ses-02_-task-movie_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_Aconstrained_noFD.mat',
             'title': 'Movie - ASC Sensory Composite',
+            'subtitle': 'Association with Sensory Experience Intensity',
+            'covariate': 'ASC Sensory'
+        },
+        'meditation_asc_sensory': {
+            'file': 'PEB_behav_associations_-ses-02_-task-meditation_cov-ASC11_COMPOSITE_SENSORY_AUDIOVISUAL_COMPLEX_ELEMENTARY_Aconstrained_noFD.mat',
+            'title': 'Meditation - ASC Sensory Composite',
             'subtitle': 'Association with Sensory Experience Intensity',
             'covariate': 'ASC Sensory'
         }
@@ -188,7 +194,7 @@ def generate_behavioral_association_plots(visualizer, coord_mapper, data_dir, ou
 
         node_coords = coord_mapper.get_coordinates(roi_names)
 
-        # Generate full network behavioral plot
+        # Generate full network behavioral plot - Behavioral uses PRGn (diverging for correlations)
         output_file = output_dir / f"behav_{behav_name}_full_network.png"
         visualizer.plot_connectome(
             conn_matrix,
@@ -196,8 +202,8 @@ def generate_behavioral_association_plots(visualizer, coord_mapper, data_dir, ou
             str(output_file),
             title=behav_info['title'],
             edge_threshold='0%',
-            node_size=40,
-            edge_cmap='RdBu_r',
+            node_size=80,  # Larger nodes
+            edge_cmap='PRGn',  # Purple-Green for behavioral associations
             display_mode='lyrz',
             colorbar=True,
             roi_names=roi_names,
@@ -220,8 +226,8 @@ def generate_behavioral_association_plots(visualizer, coord_mapper, data_dir, ou
                 str(output_file),
                 title=f"{behav_info['title']} - Hippocampus",
                 edge_threshold='0%',
-                node_size=50,
-                edge_cmap='RdBu_r',
+                node_size=100,  # Larger nodes
+                edge_cmap='PRGn',  # Purple-Green for behavioral
                 display_mode='lyrz',
                 colorbar=True,
                 roi_names=roi_names,
@@ -272,7 +278,7 @@ def generate_task_contrast_plots(visualizer, coord_mapper, data_dir, output_dir)
 
         node_coords = coord_mapper.get_coordinates(roi_names)
 
-        # Generate full network contrast plot
+        # Generate full network contrast plot - Contrasts use RdYlBu_r (task differences)
         output_file = output_dir / f"contrast_{contrast_name}_full_network.png"
         visualizer.plot_connectome(
             conn_matrix,
@@ -280,8 +286,8 @@ def generate_task_contrast_plots(visualizer, coord_mapper, data_dir, output_dir)
             str(output_file),
             title=contrast_info['title'],
             edge_threshold='0%',
-            node_size=40,
-            edge_cmap='RdBu_r',
+            node_size=80,  # Larger nodes
+            edge_cmap='RdYlBu_r',  # Red-Yellow-Blue for task contrasts
             display_mode='lyrz',
             colorbar=True,
             roi_names=roi_names,

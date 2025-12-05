@@ -6,7 +6,10 @@
       "WebFetch(domain:github.com)",
       "Bash(python:*)",
       "Bash(conda run:*)",
-      "Bash(conda env:*)"
+      "Bash(conda env:*)",
+      "WebFetch(domain:nilearn.github.io)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []
