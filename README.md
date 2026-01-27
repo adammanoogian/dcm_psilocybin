@@ -44,17 +44,20 @@ pip install -r requirements.txt
 ### 3. Run the Analysis Pipeline
 
 ```bash
-# Run full pipeline (all 8 stages)
+# Generate paper figures only (recommended for publication)
+python scripts/analysis/00_run_full_pipeline.py --paper
+
+# Run full pipeline (all 4 stages)
 python scripts/analysis/00_run_full_pipeline.py
 
-# Run nilearn brain visualizations only (stages 01-04)
+# Run nilearn brain visualizations only (stages 01-02)
 python scripts/analysis/00_run_full_pipeline.py --nilearn
 
-# Run PEB matrix heatmaps only (stages 05-06)
+# Run PEB matrix heatmaps only (stages 03-04)
 python scripts/analysis/00_run_full_pipeline.py --peb
 
 # Run from specific stage
-python scripts/analysis/00_run_full_pipeline.py --start=5
+python scripts/analysis/00_run_full_pipeline.py --start=3
 
 # Show pipeline overview
 python scripts/analysis/00_run_full_pipeline.py --overview
@@ -63,9 +66,9 @@ python scripts/analysis/00_run_full_pipeline.py --overview
 ### 4. View Results
 
 Generated figures are saved to:
-- `figures/nilearn/` - Brain connectivity visualizations
-- `figures/peb_matrices/` - Statistical matrix heatmaps
-- `figures/organized/` - Publication-ready organized figures
+- `figures/supplementary/` - ROI-focused nilearn brain plots (dlPFC, hippocampus)
+- `figures/peb_matrices/` - Individual PEB matrix heatmaps
+- `figures/paper/` - Combined 2x2 publication panels
 
 ## Project Structure
 
@@ -74,71 +77,50 @@ dcm_psilocybin/
 ├── scripts/
 │   ├── analysis/                    # Main analysis pipeline
 │   │   ├── 00_run_full_pipeline.py  # Master pipeline runner
-│   │   ├── 01_generate_nilearn_connectivity_panels.py
-│   │   ├── 02_generate_hypothesis_nilearn_panels.py
-│   │   ├── 03_generate_all_nilearn_figures.py
-│   │   ├── 04_generate_combined_nilearn_figures.py
-│   │   ├── 05_generate_all_peb_matrices.py
-│   │   ├── 06_generate_peb_matrix_panels.py
-│   │   ├── 07_organize_figures.py
-│   │   ├── 08_generate_paper_figures.py
-│   │   ├── utilities/               # Helper scripts (ROI creation, etc.)
-│   │   └── validation/              # Debug and validation scripts
+│   │   ├── 01_generate_nilearn_panels.py
+│   │   ├── 02_generate_nilearn_supplementary.py
+│   │   ├── 03_generate_all_peb_matrices.py
+│   │   ├── 04_generate_peb_matrix_panels.py
+│   │   └── validation/reference/    # Reference validation scripts
 │   ├── visualization/               # Core visualization modules
 │   │   ├── plot_nilearn_connectivity.py
 │   │   └── plot_PEB_results.py
-│   └── behav_analysis/              # Behavioral data analysis
+│   ├── matlab/                      # MATLAB DCM/PEB scripts
+│   │   ├── m6/                      # Main analysis scripts
+│   │   └── utils/                   # Utility functions
+│   └── tests/                       # Test suite
+│
+├── data/
+│   └── peb_outputs/                 # PEB analysis results (.mat files)
 │
 ├── figures/
-│   ├── nilearn/                     # Brain connectivity visualizations
-│   │   ├── panels/                  # Multi-condition panels
-│   │   ├── hypothesis_panels/       # Hypothesis-based panels
-│   │   └── combined/                # Multi-task overlays
-│   ├── peb_matrices/                # PEB matrix heatmaps (separate)
-│   └── organized/                   # Publication-organized figures
-│       ├── m1_rest/                 # REST condition
-│       ├── m2_music/                # MUSIC condition
-│       ├── m3_movie/                # MOVIE condition
-│       ├── m4_meditation/           # MEDITATION condition
-│       ├── contrasts/               # Task contrasts
-│       └── h01_multi_condition/     # Multi-condition hypotheses
+│   ├── supplementary/               # ROI-focused brain visualizations
+│   ├── peb_matrices/                # Individual matrix heatmaps
+│   ├── paper/                       # Combined publication panels
+│   └── project_images/              # Static reference images
 │
-├── docs/                            # Documentation
-│   ├── 01_project_protocol/         # Project setup and structure
-│   ├── 02_pipeline_guide/           # How to run analyses
-│   └── 03_methods_reference/        # Detailed methods
-│
-└── massive_output_local/            # Data and MATLAB outputs
-    └── adam_m6/                     # PEB analysis results (.mat files)
+└── docs/                            # Documentation
+    ├── PROJECT_GUIDE.md
+    ├── NILEARN_CONNECTIVITY_GUIDE.md
+    ├── PEB_MATRIX_VISUALIZATION_GUIDE.md
+    └── SUPPLEMENTARY_UTILITIES_GUIDE.md
 ```
-
-## Related Repository
-
-The manuscript for this project is maintained in a separate repository:
-- **Paper Repository**: [DCM_psilocybin_v2](https://github.com/adammanoogian/DCM_psilocybin_v2)
 
 ## Pipeline Stages
 
 | Stage | Script | Description | Output |
 |-------|--------|-------------|--------|
-| 01 | `01_generate_nilearn_connectivity_panels.py` | Multi-condition connectivity panels | `figures/nilearn/panels/` |
-| 02 | `02_generate_hypothesis_nilearn_panels.py` | Hypothesis-specific panels | `figures/nilearn/hypothesis_panels/` |
-| 03 | `03_generate_all_nilearn_figures.py` | All single-condition figures | `figures/nilearn/` |
-| 04 | `04_generate_combined_nilearn_figures.py` | Multi-condition overlays | `figures/nilearn/combined/` |
-| 05 | `05_generate_all_peb_matrices.py` | PEB matrix heatmaps | `figures/peb_matrices/` |
-| 06 | `06_generate_peb_matrix_panels.py` | Combined matrix panels | `figures/peb_matrices/panels/` |
-| 07 | `07_organize_figures.py` | Organize to publication structure | `figures/organized/` |
-| 08 | `08_generate_paper_figures.py` | Final paper figures | `figures/paper/` |
+| 01 | `01_generate_nilearn_panels.py` | Multi-condition brain connectivity panels | `figures/nilearn/` |
+| 02 | `02_generate_nilearn_supplementary.py` | ROI-focused supplementary figures (dlPFC, hippocampus) | `figures/supplementary/` |
+| 03 | `03_generate_all_peb_matrices.py` | PEB matrix heatmaps (pre, post, change, behavioral) | `figures/peb_matrices/` |
+| 04 | `04_generate_peb_matrix_panels.py` | Combined 2x2 publication panels | `figures/paper/` |
 
-## Output Categories
+### Paper Mode (`--paper`)
 
-### Nilearn Brain Visualizations (Stages 01-04)
-3D brain connectivity plots showing directed connections between regions.
-
-### PEB Matrix Heatmaps (Stages 05-06)
-2D statistical heatmaps of connectivity matrices from PEB analysis.
-
-These are kept **separate** to distinguish visualization types.
+Generates 32 publication-ready figures:
+- **8 nilearn supplementary** - dlPFC outgoing + hippocampus network × 4 conditions
+- **16 PEB matrices** - pre, post, change, behavioral × 4 conditions
+- **8 combined panels** - 2x2 panels in PNG + SVG × 4 conditions
 
 ## Naming Conventions
 
@@ -151,21 +133,26 @@ These are kept **separate** to distinguish visualization types.
 ### Analysis Types
 - **a** = Session change (Post - Pre psilocybin)
 - **b** = Behavioral association (11D-ASC composite sensory)
-- **c** = Behavioral association (5D-ASC auditory)
 
 ### Example Filenames
 ```
-m1-a_change_full.png           # REST session change, full network
-m2-b1_behavioral_asc11_hipp.png # MUSIC ASC11, hippocampus focus
-h01-a_all_tasks_overlay.png    # Multi-condition overlay
+session_change_rest_dlpfc_outgoing.png  # REST, dlPFC outgoing connections
+m1-a_matrix_change.png                  # REST session change matrix
+combined_PEB_analysis_rest.png          # REST 2x2 combined panel
 ```
 
 ## Documentation
 
 See `docs/` for detailed documentation:
-- [Folder Structure](docs/01_project_protocol/FOLDER_STRUCTURE.md) - Complete project organization
-- [Pipeline Guide](docs/02_pipeline_guide/PIPELINE_NAMING_CONVENTIONS.md) - How to run the pipeline
-- [Figure Organization](docs/03_methods_reference/FIGURE_ORGANIZATION_GUIDE.md) - Complete figure catalog
+- [Project Guide](docs/PROJECT_GUIDE.md) - Complete project overview
+- [Nilearn Connectivity Guide](docs/NILEARN_CONNECTIVITY_GUIDE.md) - Brain visualization methods
+- [PEB Matrix Visualization Guide](docs/PEB_MATRIX_VISUALIZATION_GUIDE.md) - Matrix heatmap methods
+- [Supplementary Utilities Guide](docs/SUPPLEMENTARY_UTILITIES_GUIDE.md) - Helper scripts and utilities
+
+## Related Repository
+
+The manuscript for this project is maintained in a separate repository:
+- **Paper Repository**: [DCM_psilocybin_v2](https://github.com/adammanoogian/DCM_psilocybin_v2)
 
 ## License
 
