@@ -6,15 +6,15 @@ Executes all analysis stages in sequence with error handling and progress tracki
 Separates nilearn brain visualizations from PEB matrix heatmaps.
 
 Pipeline Structure:
-  Stage 01-04: Nilearn Brain Connectivity Visualizations
-  Stage 05-06: PEB Matrix Heatmaps (separate from nilearn)
-  Stage 07-08: Figure Organization and Paper Generation
+  Stage 01-02: Nilearn Brain Connectivity Visualizations
+  Stage 03-04: PEB Matrix Heatmaps
 
 Usage:
-    python scripts/analysis/00_run_full_pipeline.py                    # Run all stages
-    python scripts/analysis/00_run_full_pipeline.py --start=3          # Start from stage 3
-    python scripts/analysis/00_run_full_pipeline.py --start=1 --end=4  # Run stages 1-4 (nilearn only)
-    python scripts/analysis/00_run_full_pipeline.py --start=5 --end=6  # Run stages 5-6 (PEB only)
+    python scripts/analysis/00_run_full_pipeline.py                    # Run all stages (full mode)
+    python scripts/analysis/00_run_full_pipeline.py --paper            # Generate paper figures only (12 files)
+    python scripts/analysis/00_run_full_pipeline.py --start=2          # Start from stage 2
+    python scripts/analysis/00_run_full_pipeline.py --start=1 --end=2  # Run stages 1-2 (nilearn only)
+    python scripts/analysis/00_run_full_pipeline.py --start=3 --end=4  # Run stages 3-4 (PEB only)
     python scripts/analysis/00_run_full_pipeline.py --nilearn          # Run nilearn stages only
     python scripts/analysis/00_run_full_pipeline.py --peb              # Run PEB stages only
 """
@@ -32,83 +32,44 @@ PROJECT_ROOT = PIPELINE_DIR.parent.parent
 # Organized into two main categories: Nilearn (brain visualizations) and PEB (matrix heatmaps)
 PIPELINE_STAGES = [
     # =========================================================================
-    # NILEARN BRAIN CONNECTIVITY VISUALIZATIONS (Stages 01-04)
+    # NILEARN BRAIN CONNECTIVITY VISUALIZATIONS (Stages 01-02)
     # =========================================================================
     {
-        'stage': '01 - NILEARN CONNECTIVITY PANELS',
+        'stage': '01 - NILEARN PANELS',
         'category': 'nilearn',
         'scripts': [
-            ('01_generate_nilearn_connectivity_panels.py',
-             'Multi-condition connectivity panels (session change, behavioral)'),
-        ],
-        'outputs': 'figures/nilearn/panels/'
-    },
-    {
-        'stage': '02 - HYPOTHESIS-BASED NILEARN PANELS',
-        'category': 'nilearn',
-        'scripts': [
-            ('02_generate_hypothesis_nilearn_panels.py',
-             'Hypothesis-specific connectivity panels (dlPFC, hippocampus, etc.)'),
-        ],
-        'outputs': 'figures/nilearn/hypothesis_panels/'
-    },
-    {
-        'stage': '03 - ALL NILEARN FIGURES',
-        'category': 'nilearn',
-        'scripts': [
-            ('03_generate_all_nilearn_figures.py',
-             'Comprehensive nilearn figures for all conditions (m1-m4)'),
+            ('01_generate_nilearn_panels.py',
+             'All panel visualizations (basic, hypothesis, combined)'),
         ],
         'outputs': 'figures/nilearn/'
     },
     {
-        'stage': '04 - COMBINED NILEARN FIGURES',
+        'stage': '02 - NILEARN SUPPLEMENTARY',
         'category': 'nilearn',
         'scripts': [
-            ('04_generate_combined_nilearn_figures.py',
-             'Multi-condition overlays and comparisons (h01)'),
+            ('02_generate_nilearn_supplementary.py',
+             'ROI-focused supplementary figures'),
         ],
-        'outputs': 'figures/nilearn/combined/'
+        'outputs': 'figures/supplementary/'
     },
     # =========================================================================
-    # PEB MATRIX HEATMAPS (Stages 05-06)
+    # PEB MATRIX HEATMAPS (Stages 03-04)
     # =========================================================================
     {
-        'stage': '05 - PEB MATRIX HEATMAPS',
+        'stage': '03 - PEB MATRICES',
         'category': 'peb',
         'scripts': [
-            ('05_generate_all_peb_matrices.py',
-             'Generate PEB connectivity matrix heatmaps'),
+            ('03_generate_all_peb_matrices.py',
+             'PEB matrix heatmaps'),
         ],
         'outputs': 'figures/peb_matrices/'
     },
     {
-        'stage': '06 - PEB MATRIX PANELS',
+        'stage': '04 - PEB PANELS',
         'category': 'peb',
         'scripts': [
-            ('06_generate_peb_matrix_panels.py',
-             'Create 2x2 PEB matrix panel figures'),
-        ],
-        'outputs': 'figures/peb_matrices/panels/'
-    },
-    # =========================================================================
-    # FIGURE ORGANIZATION & PAPER (Stages 07-08)
-    # =========================================================================
-    {
-        'stage': '07 - ORGANIZE FIGURES',
-        'category': 'organize',
-        'scripts': [
-            ('07_organize_figures.py',
-             'Organize all figures to publication structure (m1-m4, h01-h03)'),
-        ],
-        'outputs': 'figures/organized/'
-    },
-    {
-        'stage': '08 - GENERATE PAPER FIGURES',
-        'category': 'paper',
-        'scripts': [
-            ('08_generate_paper_figures.py',
-             'Generate final publication-ready figures'),
+            ('04_generate_peb_matrix_panels.py',
+             '2x2 combined panels'),
         ],
         'outputs': 'figures/paper/'
     },
@@ -116,7 +77,7 @@ PIPELINE_STAGES = [
 
 
 def run_pipeline(start_stage: int = 1, end_stage: int = None,
-                 category: str = None, verbose: bool = True):
+                 category: str = None, verbose: bool = True, paper_mode: bool = False):
     """
     Run the analysis pipeline.
 
@@ -127,14 +88,19 @@ def run_pipeline(start_stage: int = 1, end_stage: int = None,
     end_stage : int, optional
         Stage number to end at (inclusive). If None, run all remaining stages.
     category : str, optional
-        Filter by category: 'nilearn', 'peb', 'organize', 'paper', or None for all.
+        Filter by category: 'nilearn', 'peb', or None for all.
     verbose : bool
         Print detailed progress information.
+    paper_mode : bool
+        If True, run only paper-relevant stages (02, 03, 04) with --paper flag.
+        Generates 12 figures: 4 PEB panels + 8 ROI-focused nilearn plots.
     """
     start_time = datetime.now()
 
     print("=" * 80)
     print("DCM PSILOCYBIN ANALYSIS PIPELINE")
+    if paper_mode:
+        print("MODE: PAPER (generating 12 paper figures only)")
     print("=" * 80)
     print(f"Start time: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Project root: {PROJECT_ROOT}")
@@ -142,8 +108,13 @@ def run_pipeline(start_stage: int = 1, end_stage: int = None,
     if end_stage is None:
         end_stage = len(PIPELINE_STAGES)
 
-    # Filter stages by category if specified
-    if category:
+    # Filter stages based on paper_mode or category
+    if paper_mode:
+        # Paper mode: Only run stages 02 (nilearn ROI), 03 (PEB matrices), 04 (PEB panels)
+        paper_stage_numbers = [2, 3, 4]
+        stages_to_run = [PIPELINE_STAGES[i-1] for i in paper_stage_numbers]
+        print(f"\nRunning PAPER stages: 02, 03, 04")
+    elif category:
         stages_to_run = [s for i, s in enumerate(PIPELINE_STAGES, 1)
                          if start_stage <= i <= end_stage and s['category'] == category]
         print(f"\nRunning {category.upper()} stages only")
@@ -180,11 +151,18 @@ def run_pipeline(start_stage: int = 1, end_stage: int = None,
 
             print(f"Running: {description}")
             print(f"   Script: {script_name}")
+            if paper_mode:
+                print(f"   Flags: --paper")
             print("-" * 40)
+
+            # Build command - add --paper flag if in paper_mode
+            cmd = [sys.executable, str(script_path)]
+            if paper_mode:
+                cmd.append('--paper')
 
             # Run the script
             result = subprocess.run(
-                [sys.executable, str(script_path)],
+                cmd,
                 cwd=str(PROJECT_ROOT),
                 capture_output=not verbose,
                 text=True,
@@ -249,10 +227,11 @@ def print_pipeline_overview():
 
     print("\n" + "=" * 80)
     print("\nUsage examples:")
-    print("  python 00_run_full_pipeline.py              # Run all stages")
-    print("  python 00_run_full_pipeline.py --nilearn    # Run nilearn only (01-04)")
-    print("  python 00_run_full_pipeline.py --peb        # Run PEB only (05-06)")
-    print("  python 00_run_full_pipeline.py --start=5    # Start from stage 5")
+    print("  python 00_run_full_pipeline.py              # Run all stages (full mode)")
+    print("  python 00_run_full_pipeline.py --paper      # Generate paper figures only (12 files)")
+    print("  python 00_run_full_pipeline.py --nilearn    # Run nilearn only (01-02)")
+    print("  python 00_run_full_pipeline.py --peb        # Run PEB only (03-04)")
+    print("  python 00_run_full_pipeline.py --start=3    # Start from stage 3")
     print("  python 00_run_full_pipeline.py --overview   # Show this overview")
     print("=" * 80)
 
@@ -278,12 +257,17 @@ def main():
     parser.add_argument(
         '--nilearn',
         action='store_true',
-        help='Run only nilearn brain visualization stages (01-04)',
+        help='Run only nilearn brain visualization stages (01-02)',
     )
     parser.add_argument(
         '--peb',
         action='store_true',
-        help='Run only PEB matrix heatmap stages (05-06)',
+        help='Run only PEB matrix heatmap stages (03-04)',
+    )
+    parser.add_argument(
+        '--paper',
+        action='store_true',
+        help='Generate paper figures only (stages 02, 03, 04 with --paper flag)',
     )
     parser.add_argument(
         '--quiet',
@@ -314,6 +298,7 @@ def main():
         end_stage=args.end,
         category=category,
         verbose=not args.quiet,
+        paper_mode=args.paper,
     )
 
     sys.exit(0 if success else 1)

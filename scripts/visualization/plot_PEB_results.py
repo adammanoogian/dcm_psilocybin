@@ -105,7 +105,7 @@ class PEBDataLoader:
             'model': 'BMA',
             'pp_threshold': 0.99,
             'roi_reorder': None,  # Can be set to a list of indices if needed
-            'font_size': 14,
+            'font_size': 21,  # Increased 50% from 14
             'revert_diag': True
         }
         return params
@@ -313,21 +313,28 @@ class PEBDataLoader:
     def reshape_posterior_full(roi_n, cov_n, Ep, Pp, param_n):
         """
         Reshape full connectivity model (all roi_n x roi_n connections present).
+
+        IMPORTANT: MATLAB stores matrices in column-major (Fortran) order.
+        A(i,j) where i=row (target/TO), j=col (source/FROM) is stored at
+        linear index (j-1)*nrows + i in MATLAB (1-indexed).
+
+        Using order='F' ensures correct mapping from MATLAB's linear storage.
         """
         # Reshape into (roi_n, roi_n, cov_n)
         Ep_reshaped = np.zeros((roi_n, roi_n, cov_n))
         Pp_reshaped = np.zeros((roi_n, roi_n, cov_n))
-        
+
         for i_cov in range(cov_n):
             start_idx = i_cov * param_n
             end_idx = (i_cov + 1) * param_n
-            
-            cov_data_ep = Ep[start_idx:end_idx].reshape(roi_n, roi_n)
-            cov_data_pp = Pp[start_idx:end_idx].reshape(roi_n, roi_n)
-            
+
+            # Use Fortran order to match MATLAB's column-major storage
+            cov_data_ep = Ep[start_idx:end_idx].reshape(roi_n, roi_n, order='F')
+            cov_data_pp = Pp[start_idx:end_idx].reshape(roi_n, roi_n, order='F')
+
             Ep_reshaped[:, :, i_cov] = cov_data_ep
             Pp_reshaped[:, :, i_cov] = cov_data_pp
-        
+
         return Ep_reshaped, Pp_reshaped, param_n
     
     @staticmethod
@@ -516,9 +523,39 @@ class PEBPlotter:
             
         elif revert_diag and (peb_type == 'behav_associations' or peb_type == 'groupmean'):
             # For other types: A_diag = -exp(diag(A))/2
+            # IMPORTANT: Only apply to:
+            #   1. Connections that were actually estimated (in constrained model)
+            #   2. Values that passed the Pp threshold (non-zero after thresholding)
+            # This prevents -exp(0)/2 = -0.5 from creating spurious values
+            estimated_indices = self.data.get('estimated_indices')
+
             for i_cov in range(cov_n):
                 A = Ep[:, :, i_cov].copy()
-                np.fill_diagonal(A, -np.exp(np.diag(A)) / 2)
+                diag_vals = np.diag(A)
+                new_diag = diag_vals.copy()
+
+                # Only transform diagonal elements that were actually estimated
+                if estimated_indices is not None and len(estimated_indices[0]) > 0:
+                    # Find which diagonal elements were estimated
+                    estimated_diag_mask = np.zeros(roi_n, dtype=bool)
+                    for row, col in zip(estimated_indices[0], estimated_indices[1]):
+                        if row == col:
+                            estimated_diag_mask[row] = True
+
+                    # Apply transformation only to estimated diagonal elements
+                    # AND only if the value is non-zero (passed Pp threshold)
+                    for i in range(roi_n):
+                        if estimated_diag_mask[i] and diag_vals[i] != 0:
+                            new_diag[i] = -np.exp(diag_vals[i]) / 2
+                        # else: keep as-is (either unestimated or zeroed by threshold)
+                else:
+                    # Full model: apply to all non-zero diagonal elements
+                    for i in range(roi_n):
+                        if diag_vals[i] != 0:
+                            new_diag[i] = -np.exp(diag_vals[i]) / 2
+                        # else: keep as zero (zeroed by Pp threshold)
+
+                np.fill_diagonal(A, new_diag)
                 Ep[:, :, i_cov] = A
 
         # Change toward zero analysis for 'change' type PEB
@@ -637,13 +674,16 @@ class PEBPlotter:
             colors = np.vstack([cold_colors, hot_colors])
             cmap = LinearSegmentedColormap.from_list('matlab_custom', colors)
             # if A_constrained and behav_associations, shade in template indices
-            if self.data.get('peb_type') == 'behav_associations' and 'template_indices' in locals():
+            # template_indices is set earlier in the behav_associations block (line ~605)
+            if self.data.get('peb_type') == 'behav_associations' and 'template_indices' in locals() and template_indices is not None:
                 # Create new rectangles for this subplot (matplotlib patches can't be reused)
                 # template_indices are (row, col) from Ep where Ep[row,col] = FROM col TO row
-                # After data transpose, Ep.T[col,row] is plotted at axes position (x=row, y=col)
-                # So box should be at plt.Rectangle((row, col)) which matches the visual position
+                # After data transpose, Ep.T[col,row] is plotted at heatmap position [col, row]
+                # In seaborn heatmap, position [i,j] is at x=j, y=i
+                # So for transposed data at [col,row], x=row, y=col
+                # Rectangle((x,y), width, height) starts at bottom-left corner
                 for row, col in zip(template_indices[0], template_indices[1]):
-                    rect = plt.Rectangle((col, row), 1, 1, fill=False, edgecolor='black',
+                    rect = plt.Rectangle((row, col), 1, 1, fill=False, edgecolor='black',
                                         linestyle='dotted', linewidth=2)
                     ax.add_patch(rect)
             # Custom colormap for "Change toward 0" plot
@@ -704,7 +744,8 @@ class PEBPlotter:
             annot_array_transposed = annot_array.T
             
             sns.heatmap(plot_data_transposed, annot=annot_array_transposed, fmt='', cmap=cmap, vmin=-0.5, vmax=0.5,
-                        xticklabels=roi_names, yticklabels=roi_names, cbar_kws={'label': heat_label}, ax=ax)
+                        xticklabels=roi_names, yticklabels=roi_names, cbar_kws={'label': heat_label}, ax=ax,
+                        annot_kws={'fontsize': 18})  # 75% increase from default ~10
 
             # Map covariate names to short descriptive titles
             title_mapping = {
@@ -725,9 +766,10 @@ class PEBPlotter:
                 title = "Connectivity"
 
             ax.set_title(title, fontsize=font_size + 2, fontweight='bold')
-            ax.set_xlabel("From", fontsize=font_size)
-            ax.set_ylabel("To", fontsize=font_size)
-            ax.tick_params(axis='both', labelsize=font_size - 2)
+            # After transpose: rows=sources (FROM), columns=targets (TO)
+            ax.set_xlabel("To", fontsize=23)
+            ax.set_ylabel("From", fontsize=23)
+            ax.tick_params(axis='both', labelsize=23)
             plt.xticks(rotation=30)
             plt.tight_layout(pad=0.2)
             plt.subplots_adjust(left=0.05, right=0.98, top=0.95, bottom=0.08)
@@ -778,7 +820,7 @@ class PEBPlotter:
 
 # -----------------------------------------------------------------------------
 def run_peb_plot(
-    mat_file="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\massive_output_local\\adam_m6\\PEB_change_-ses-01-ses-02_-task-rest_cov-_noFD.mat",
+    mat_file="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\data\\peb_outputs\\PEB_change_-ses-01-ses-02_-task-rest_cov-_noFD.mat",
     output_dir="C:/Users/aman0087/Documents/Github/dcm_psilocybin/plots",
     show=True,
     save=True
@@ -842,7 +884,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Plot PEB results from a MATLAB .mat file.")
-    parser.add_argument("--mat_file", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\massive_output_local\\adam_m6", help="Path to the PEB .mat file or directory")
+    parser.add_argument("--mat_file", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\data\\peb_outputs", help="Path to the PEB .mat file or directory")
     parser.add_argument("--output_dir", type=str, default="C:\\Users\\aman0087\\Documents\\Github\\dcm_psilocybin\\plots", help="Directory to save SVG plots (default: alongside .mat file)")
     parser.add_argument("--no-show", action="store_true", help="Do not display plots interactively")
     parser.add_argument("--no-save", action="store_true", help="Do not save SVG plots")

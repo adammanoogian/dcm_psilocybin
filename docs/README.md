@@ -1,60 +1,47 @@
 # Documentation
 
-This folder contains all project documentation organized by category.
+This folder contains all project documentation.
 
 ## Structure
 
 ```
 docs/
-├── README.md                    # This file - documentation navigation
-├── 01_project_protocol/         # Project setup, configuration, folder structure
-│   ├── FOLDER_STRUCTURE.md      # Comprehensive project organization guide
-│   ├── CONN_TOOLBOX_REFERENCE.md # CONN batch scripting reference
-│   └── M3_HPC_GUIDE.md          # Monash M3 cluster guide
-├── 02_pipeline_guide/           # How to run analyses
-│   ├── PIPELINE_NAMING_CONVENTIONS.md  # Script and output naming standards
-│   └── FIGURE_QUICK_REFERENCE.md       # Quick lookup tables for figures
-├── 03_methods_reference/        # Detailed methods and algorithms
-│   ├── FIGURE_ORGANIZATION_GUIDE.md    # Complete figure catalog
-│   └── NILEARN_CONNECTIVITY_GUIDE.md   # Nilearn visualization details
-└── legacy/                      # Archived/deprecated documentation
+├── README.md                         # This file - documentation navigation
+├── PROJECT_GUIDE.md                  # Comprehensive project, pipeline, and figure guide
+├── NILEARN_CONNECTIVITY_GUIDE.md     # Nilearn visualization details
+├── PEB_MATRIX_VISUALIZATION_GUIDE.md # PEB heatmap technical details
+└── SUPPLEMENTARY_UTILITIES_GUIDE.md  # Utility scripts reference
 ```
 
 ## Quick Links
 
 ### Getting Started
-- [Project Goals](01_project_protocol/PROJECT_GOALS.md) - Analysis roadmap and implementation status
-- [Folder Structure](01_project_protocol/FOLDER_STRUCTURE.md) - Project organization overview
-- [Pipeline Guide](02_pipeline_guide/PIPELINE_NAMING_CONVENTIONS.md) - How to run the analysis pipeline
+- [Project Guide](PROJECT_GUIDE.md) - Comprehensive guide covering project structure, pipeline, and figures
 
-### HPC and Connectivity Analysis
-- [M3 HPC Guide](01_project_protocol/M3_HPC_GUIDE.md) - Monash M3 cluster SSH/SLURM guide
-- [CONN Toolbox Reference](01_project_protocol/CONN_TOOLBOX_REFERENCE.md) - CONN batch scripting for functional/dynamic connectivity
-
-### Reference
-- [Figure Quick Reference](02_pipeline_guide/FIGURE_QUICK_REFERENCE.md) - Quick lookup for figures
-- [Figure Organization Guide](03_methods_reference/FIGURE_ORGANIZATION_GUIDE.md) - Complete figure catalog
-- [Nilearn Connectivity Guide](03_methods_reference/NILEARN_CONNECTIVITY_GUIDE.md) - Brain visualization details
+### Visualization Reference
+- [Nilearn Connectivity Guide](NILEARN_CONNECTIVITY_GUIDE.md) - Brain visualization details
+- [PEB Matrix Visualization Guide](PEB_MATRIX_VISUALIZATION_GUIDE.md) - Heatmap technical details
+- [Supplementary Utilities Guide](SUPPLEMENTARY_UTILITIES_GUIDE.md) - Utility scripts reference
 
 ## Running the Analysis Pipeline
 
-The analysis pipeline is organized into 8 numbered stages with a master runner:
+The analysis pipeline is organized into 4 numbered stages with a master runner:
 
 ```bash
 # Run full pipeline
 python scripts/analysis/00_run_full_pipeline.py
 
-# Run nilearn visualizations only (stages 01-04)
+# Run nilearn visualizations only (stages 01-02)
 python scripts/analysis/00_run_full_pipeline.py --nilearn
 
-# Run PEB matrix heatmaps only (stages 05-06)
+# Run PEB matrix heatmaps only (stages 03-04)
 python scripts/analysis/00_run_full_pipeline.py --peb
 
 # Run from specific stage
-python scripts/analysis/00_run_full_pipeline.py --start=5
+python scripts/analysis/00_run_full_pipeline.py --start=3
 
 # Run specific range
-python scripts/analysis/00_run_full_pipeline.py --start=3 --end=6
+python scripts/analysis/00_run_full_pipeline.py --start=1 --end=2
 
 # Show pipeline overview
 python scripts/analysis/00_run_full_pipeline.py --overview
@@ -64,9 +51,8 @@ python scripts/analysis/00_run_full_pipeline.py --overview
 
 | Stage | Category | Description |
 |-------|----------|-------------|
-| 01-04 | Nilearn | Brain connectivity visualizations (3D plots) |
-| 05-06 | PEB | Statistical matrix heatmaps (2D plots) |
-| 07-08 | Output | Figure organization and paper generation |
+| 01-02 | Nilearn | Brain connectivity visualizations (3D plots) |
+| 03-04 | PEB | Statistical matrix heatmaps (2D plots) |
 
 ## Output Organization
 
@@ -83,14 +69,13 @@ Figures are organized into two main categories (kept **separate**):
 
 Both are organized into publication structure in `figures/organized/`.
 
-## Scripts Organization
+## Running Validation Tests
 
-```
-scripts/analysis/
-├── 00_run_full_pipeline.py      # Master pipeline runner
-├── 01-08_*.py                   # Numbered pipeline scripts
-├── utilities/                   # Helper scripts (12 scripts)
-└── validation/                  # Debug/test scripts (17 scripts)
-```
+```bash
+# Run all validation tests
+pytest scripts/tests/test_validation/ -v
 
-See [Folder Structure](01_project_protocol/FOLDER_STRUCTURE.md) for complete details.
+# Run specific test category
+pytest scripts/tests/test_validation/test_peb_constraints.py -v
+pytest scripts/tests/test_validation/test_atlas_symmetry.py -v
+```

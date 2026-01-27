@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "DCM Psilocybin Analysis"
+abstract: "Dynamic Causal Modeling (DCM) analysis of psilocybin effects on brain connectivity using Parametric Empirical Bayes (PEB) with behavioral covariate associations."
+authors:
+  - family-names: "Manoogian"
+    given-names: "Adam"
+    orcid: ""
+keywords:
+  - neuroimaging
+  - psilocybin
+  - dynamic causal modeling
+  - DCM
+  - parametric empirical bayes
+  - PEB
+  - brain connectivity
+  - fMRI
+  - psychedelics
+license: CC-BY-4.0
+repository-code: "https://github.com/adammanoogian/dcm_psilocybin"
+version: "1.0.0"
+date-released: "2024-01-01"
