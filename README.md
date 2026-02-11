@@ -20,23 +20,6 @@ python scripts/analysis/00_run_full_pipeline.py --paper   # publication figures 
 python scripts/analysis/00_run_full_pipeline.py --overview # show pipeline stages
 ```
 
-Generated figures are saved to `figures/`.
-
-## Project Structure
-
-```
-scripts/analysis/       # 4-stage pipeline (nilearn visuals → PEB matrices → panels)
-scripts/visualization/  # Core plotting modules
-scripts/matlab/         # MATLAB DCM/PEB scripts
-data/peb_outputs/       # PEB analysis results (.mat files)
-figures/                # All generated figures
-docs/                   # Detailed documentation
-```
-
-## Related Repository
-
-The manuscript is maintained separately: [DCM_psilocybin_v2](https://github.com/adammanoogian/DCM_psilocybin_v2)
-
 ## Citation
 
 ```bibtex
