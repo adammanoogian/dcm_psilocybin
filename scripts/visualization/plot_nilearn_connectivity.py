@@ -49,7 +49,12 @@ class AALCoordinateMapper:
             from scipy.ndimage import center_of_mass
 
             print("Fetching AAL atlas...")
-            self.aal = fetch_atlas_aal()
+            # Pin to the SPM12 atlas: regions are matched by name (not index),
+            # both versions carry the standard AAL labels, and SPM12 was the
+            # nilearn default used for prior figure runs. nilearn >=0.11 changed
+            # the default to "3v2", whose download is blocked on TLS-intercepting
+            # networks; SPM12 resolves from the local cache offline.
+            self.aal = fetch_atlas_aal(version="SPM12")
 
             # Load atlas image directly for proper coordinate computation
             print("Extracting region coordinates...")
