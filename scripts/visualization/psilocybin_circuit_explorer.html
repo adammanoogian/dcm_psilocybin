@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Psilocybin DCM Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=STIX+Two+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+  background: #F3F4F6; color: #374151;
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+}
+
+#topbar {
+  background: #fff; border-bottom: 1px solid #E5E7EB;
+  padding: 8px 18px; display: flex; align-items: center; gap: 14px;
+  flex-shrink: 0; height: 42px;
+}
+#topbar h1 { font-size: 14px; font-weight: 800; color: #111827; letter-spacing: 0.03em; white-space: nowrap; }
+#topbar .sub { font-size: 13px; color: #9CA3AF; white-space: nowrap; }
+#topbar .tag {
+  font-size: 12px; background: #F3F4F6; border: 1px solid #E5E7EB;
+  color: #534AB7; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+#topbar .spacer { flex: 1; }
+
+#main-row { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+#left-sidebar {
+  width: 256px; min-width: 256px; flex-shrink: 0;
+  background: #F8FAFC; border-right: 1px solid #E5E7EB;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#sidebar-scroll { flex: 1; overflow-y: auto; padding: 6px 10px 14px; }
+
+.sb-section { margin-bottom: 4px; }
+.sb-header {
+  font-size: 10px; font-weight: 800; color: #9CA3AF;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  padding: 8px 2px 5px; border-bottom: 1px solid #E5E7EB; margin-bottom: 6px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.cond-card {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 9px 7px 10px; border-radius: 6px;
+  border: 1.5px solid #E5E7EB; border-left: 3px solid var(--c);
+  background: #FAFAFA; margin-bottom: 5px; cursor: pointer;
+  transition: background 0.10s, border-color 0.10s; font-family: inherit;
+}
+.cond-card:hover { background: #F0F2F8; }
+.cond-card.active {
+  background: color-mix(in srgb, var(--c) 8%, #fff);
+  border-right-color: var(--c); border-top-color: var(--c); border-bottom-color: var(--c);
+}
+.cond-card .cc-hd { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.cond-card .cc-tag {
+  font-size: 9px; font-weight: 800; color: var(--c);
+  background: color-mix(in srgb, var(--c) 14%, #fff);
+  padding: 1px 5px; border-radius: 3px; line-height: 1.5; text-transform: uppercase; letter-spacing: 0.4px;
+}
+.cond-card .cc-label { font-size: 13px; font-weight: 600; color: #1F2937; line-height: 1.3; }
+.cond-card .cc-sub  { font-size: 11px; color: #6B7280; line-height: 1.4; }
+
+.toggle-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.tg-btn {
+  padding: 4px 9px; border-radius: 5px; border: 1.5px solid #E5E7EB;
+  background: #FAFAFA; font-size: 12px; cursor: pointer;
+  font-family: inherit; transition: all 0.10s; font-weight: 600; color: #374151;
+}
+.tg-btn:hover { background: #F3F4F6; }
+.tg-btn.active { color: var(--c, #534AB7); border-color: var(--c, #534AB7); background: color-mix(in srgb, var(--c, #534AB7) 9%, #fff); }
+
+#diagram-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; background: #fff;
+}
+#diagram-svg { max-width: 100%; max-height: 100%; }
+
+#info-panel {
+  width: 282px; min-width: 282px; background: #F8FAFC;
+  border-left: 1px solid #E5E7EB; overflow-y: auto; flex-shrink: 0;
+  padding: 12px 14px;
+}
+#info-panel h2 {
+  font-size: 10px; font-weight: 800; color: #9CA3AF;
+  letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 10px;
+}
+.info-block { margin-bottom: 13px; padding: 9px 10px; border-radius: 6px; background: #fff; border: 1px solid #E5E7EB; }
+.info-block .ib-title { font-size: 10px; color: #6B7280; margin-bottom: 4px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; }
+.info-block .ib-text { font-size: 12px; color: #1F2937; line-height: 1.7; }
+.info-block .ib-text .pos { color: #1D9E75; font-weight: 700; }
+.info-block .ib-text .neg { color: #D85A30; font-weight: 700; }
+.info-block .ib-text .dim { color: #6B7280; font-size: 11px; }
+.info-block .ib-text .sym { font-family: 'STIX Two Text', Georgia, serif; }
+.edge-list { font-size: 11px; line-height: 1.85; }
+.edge-list .er { display: flex; gap: 6px; align-items: baseline; padding: 1px 0; }
+.edge-list .er-arrow { font-family: 'STIX Two Text', Georgia, serif; color: #4B5563; flex: 1; }
+.edge-list .er-val { font-family: 'STIX Two Text', Georgia, serif; font-weight: 700; flex-shrink: 0; }
+
+#bottom-panel {
+  height: 224px; min-height: 224px; flex-shrink: 0;
+  border-top: 1px solid #E5E7EB; background: #fff;
+  display: flex; overflow: hidden;
+}
+#matrix-area {
+  display: flex; gap: 16px; padding: 8px 14px;
+  overflow-x: auto; align-items: flex-start; flex-shrink: 0;
+}
+.matrix-block { flex-shrink: 0; }
+.matrix-block-label {
+  font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.7px; margin-bottom: 5px; padding-bottom: 3px;
+  border-bottom: 2px solid var(--mc, #534AB7);
+  font-family: 'Source Sans 3', sans-serif;
+}
+.mtbl { border-collapse: separate; border-spacing: 1px; }
+.mtbl .col-hdr {
+  font-size: 8.5px; font-weight: 700; text-align: center;
+  color: #6B7280; padding: 0 1px 2px; transform: rotate(-45deg); transform-origin: bottom left;
+  font-family: 'Source Sans 3', sans-serif; height: 36px; vertical-align: bottom;
+}
+.mtbl .row-hdr {
+  font-size: 9px; font-weight: 700; color: #6B7280;
+  padding: 0 4px 0 0; text-align: right; white-space: nowrap;
+  font-family: 'Source Sans 3', sans-serif; vertical-align: middle;
+}
+.mcell {
+  font-size: 9px; text-align: center; padding: 0;
+  width: 26px; height: 16px; line-height: 16px;
+  border-radius: 2px; cursor: pointer;
+  font-family: 'STIX Two Text', Georgia, serif;
+  transition: outline 0.1s;
+}
+.mcell.hl-cell { outline: 2px solid #CC8800; outline-offset: -1px; position: relative; z-index: 1; }
+.mcell.muted { opacity: 0.25; }
+
+.node-shape { cursor: pointer; }
+.node-shape.dimmed { opacity: 0.35; }
+.edge-grp { transition: opacity 0.15s; }
+.edge-grp.hidden { display: none; }
+.edge-grp:hover .edge-line { stroke-width: 4 !important; }
+
+.lens-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.lens-btn {
+  padding: 5px 7px; border-radius: 5px; border: 1.5px solid #E5E7EB;
+  background: #FAFAFA; font-size: 11px; cursor: pointer;
+  text-align: left; font-family: inherit; line-height: 1.3;
+  transition: all 0.10s;
+}
+.lens-btn:hover { background: #F3F4F6; }
+.lens-btn.active { color: var(--c); border-color: var(--c); background: color-mix(in srgb, var(--c) 10%, #fff); font-weight: 700; }
+.lens-btn .lb-sub { font-size: 9.5px; color: #6B7280; display: block; font-weight: 400; }
+
+.legend-row { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: #6B7280; padding: 1px 0; }
+.legend-line { width: 26px; height: 2.5px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Psilocybin DCM Explorer</h1>
+  <span class="sub">10-node bilateral · dlPFC · Hipp · Thal · MTG · SOG</span>
+  <span class="tag">spDCM × PEB</span>
+  <span class="tag" id="tag-pp">Pp &gt; 0.99</span>
+  <span class="tag" id="tag-mode">paper palette</span>
+  <div class="spacer"></div>
+  <span class="sub" id="counts">—</span>
+</div>
+
+<div id="main-row">
+
+  <div id="left-sidebar">
+    <div id="sidebar-scroll">
+
+      <div class="sb-section">
+        <div class="sb-header">Main results</div>
+        <div id="result-cards"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">Condition</div>
+        <div id="cond-cards"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">View</div>
+        <div class="toggle-row" id="view-buttons"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">Hemisphere</div>
+        <div class="toggle-row" id="hemi-buttons"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">Theory lens</div>
+        <div class="lens-row" id="lens-buttons"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">Connection types</div>
+        <div class="toggle-row" id="conntype-buttons"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">Export</div>
+        <button id="btn-save-png" class="tg-btn"
+          style="width:100%;padding:6px 8px;font-weight:700;--c:#534AB7"
+          title="Save current circle diagram as a PNG (2× scale). Filename encodes the active conditions / view / lens / hemisphere.">
+          ⬇ Save diagram PNG
+        </button>
+        <div id="export-status" style="font-size:10px;color:#9CA3AF;margin-top:4px;min-height:12px"></div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-header">Legend</div>
+        <div id="legend-content"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="diagram-wrap">
+    <svg id="diagram-svg" viewBox="0 0 760 520" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr-pos" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#1D9E75"/></marker>
+        <marker id="arr-neg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#D85A30"/></marker>
+        <marker id="arr-beta-pos" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#534AB7"/></marker>
+        <marker id="arr-beta-neg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#9A7820"/></marker>
+        <marker id="arr-cond-rest" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#534AB7"/></marker>
+        <marker id="arr-cond-music" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#1D9E75"/></marker>
+        <marker id="arr-cond-movie" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#9A7820"/></marker>
+        <marker id="arr-cond-meditation" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="#D85A30"/></marker>
+        <!-- Flex arrowhead inherits stroke color via context-stroke (SVG 2) -->
+        <marker id="arr-flex" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 Z" fill="context-stroke"/></marker>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <text x="380" y="20" text-anchor="middle" font-size="11" fill="#9CA3AF"
+        font-weight="800" letter-spacing="1.0" font-family="Source Sans 3, sans-serif">
+        EFFECTIVE CONNECTIVITY (post − pre, ASC11 β)
+      </text>
+
+      <g id="groups-layer"></g>
+      <g id="edges-layer"></g>
+      <g id="nodes-layer"></g>
+      <g id="cluster-labels"></g>
+    </svg>
+  </div>
+
+  <div id="info-panel">
+    <h2>Selected</h2>
+    <div class="info-block" id="info-content">
+      <div class="ib-title">Click an edge or matrix cell</div>
+      <div class="ib-text"><span class="dim">Pick a condition and view to explore. Significant connections are drawn (Pp&gt;0.99). Use the hemisphere and theory-lens filters to declutter.</span></div>
+    </div>
+
+    <div class="info-block">
+      <div class="ib-title">Top edges this view</div>
+      <div class="edge-list" id="top-edges"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="bottom-panel">
+  <div id="matrix-area"></div>
+</div>
+
+<script src="psilocybin_data.js"></script>
+<script>
+// ── Region & layout config ─────────────────────────────────────────────────
+const ROIS = window.PSI_DATA.roi_names;
+// indices: 0 ldlPFC 1 rdlPFC | 2 lHipp 3 rHipp | 4 lSOG 5 rSOG
+//          6 lMTG  7 rMTG  | 8 lThal 9 rThal
+
+// Pentagonal layout: 5 ROI clusters equidistant on a circle.
+// dlPFC at top; CCW so memory (Hipp, Thal) is on the left and sensory
+// (MTG, SOG) is on the right.
+const RING_CX = 380, RING_CY = 282, RING_R = 180;
+function _ringPos(angDeg) {
+  const a = angDeg * Math.PI / 180;
+  return { cx: RING_CX + RING_R * Math.cos(a), cy: RING_CY - RING_R * Math.sin(a) };
+}
+const CLUSTER_CONFIG = [
+  { name: 'dlPFC', ...(_ringPos( 90)), color: '#534AB7', L_idx: 0, R_idx: 1, group: 'frontal' },
+  { name: 'Hipp',  ...(_ringPos(162)), color: '#D85A30', L_idx: 2, R_idx: 3, group: 'memory'  },
+  { name: 'Thal',  ...(_ringPos(234)), color: '#185FA5', L_idx: 8, R_idx: 9, group: 'memory'  },
+  { name: 'SOG',   ...(_ringPos(306)), color: '#9A7820', L_idx: 4, R_idx: 5, group: 'sensory' },
+  { name: 'MTG',   ...(_ringPos( 18)), color: '#1D9E75', L_idx: 6, R_idx: 7, group: 'sensory' },
+];
+const DISC_OFFSET = 22;   // L/R disc offset from cluster center
+const DISC_R = 24;
+
+// Build per-ROI position. L and R discs sit on the ring's tangent line at
+// each cluster, with L always biased toward the viewer's left (smaller x).
+const NODE_POS = {};
+const CLUSTER_OF = {};
+for (const cl of CLUSTER_CONFIG) {
+  const dx = cl.cx - RING_CX, dy = cl.cy - RING_CY;
+  const rlen = Math.hypot(dx, dy) || 1;
+  // Tangent perpendicular to radial. Two candidates: ±(-dy/r, dx/r).
+  let tx = -dy / rlen, ty = dx / rlen;
+  if (tx > 0) { tx = -tx; ty = -ty; }   // ensure L bias toward leftward x
+  NODE_POS[cl.L_idx] = { x: cl.cx + tx * DISC_OFFSET, y: cl.cy + ty * DISC_OFFSET, side: 'L', cluster: cl };
+  NODE_POS[cl.R_idx] = { x: cl.cx - tx * DISC_OFFSET, y: cl.cy - ty * DISC_OFFSET, side: 'R', cluster: cl };
+  CLUSTER_OF[cl.L_idx] = cl;
+  CLUSTER_OF[cl.R_idx] = cl;
+}
+
+// ── App state ──────────────────────────────────────────────────────────────
+const STATE = {
+  result: null,           // null | 'R1' | 'R2' | 'R3' | 'R4' — curated poster main effect
+  conditions: ['rest'],   // multi-select array
+  view: 'change',         // 'change' | 'behav' | 'mean_post' | 'overlay'
+  hemisphere: 'all',      // 'all' | 'L' | 'R' | 'cross' | 'ipsi'
+  lens: 'all',            // 'all' | 'memory' | 'thalamic' | 'frontal' | 'sensory'
+  showSelf: true,         // diagonal A(i,i): self-connections (matrix only — never drawn)
+  showContra: true,       // L↔R between two halves of the same ROI cluster
+  selectedEdge: null,
+};
+
+// ── Curated poster main effects (R1–R4) ─────────────────────────────────────
+// Source: poster_4_main_results.md. Each result restricts the diagram to the
+// connections that tell that effect's story. Edges are [source, target] index
+// pairs (FROM → TO) under the relevant condition. `srcWild` matches ALL
+// outgoing edges from that node (for "broad pattern" descriptions). Selecting
+// a result auto-activates its conditions and switches to the Δ+β overlay view
+// so the change and behavioural columns of the poster table both appear.
+//   idx: 0 ldlPFC 1 rdlPFC | 2 lHipp 3 rHipp | 4 lSOG 5 rSOG | 6 lMTG 7 rMTG | 8 lThal 9 rThal
+const RESULTS = {
+  R1: {
+    label: 'R1 · lHipp drives hallucinations',
+    sub: 'Memory-driven hypothesis',
+    color: '#D85A30',
+    conditions: ['rest', 'movie'],
+    edges: {
+      rest:       [[2,5],[2,7],[2,9]],            // lHipp → rSOG / rMTG / rThal
+      movie:      [[2,8],[2,0],[2,1],[2,4]],      // lHipp → lThal / ldlPFC / rdlPFC / lSOG
+      music:      [[2,3]],                        // lHipp → rHipp
+      meditation: [{srcWild: 2}],                 // lHipp broad inhibition
+    },
+    story: 'Left-hippocampal inhibition of sensory cortex and thalamus consistently '
+         + 'predicts symptoms — strongest during movie viewing (β = +0.20). The '
+         + 'hippocampus imposes internally-generated content by suppressing sensory '
+         + 'processing.',
+  },
+  R2: {
+    label: 'R2 · Inverse thalamic effect',
+    sub: 'Challenges gating theory',
+    color: '#185FA5',
+    conditions: ['movie', 'rest'],
+    edges: {
+      movie:      [[4,8],[6,8],[9,0]],            // lSOG/lMTG → lThal ; rThal → ldlPFC
+      rest:       [[8,1],[4,8]],                  // lThal → rdlPFC ; lSOG → lThal
+      music:      [[5,8],[6,9]],                  // rSOG → lThal ; lMTG → rThal
+      meditation: [[9,2]],                        // rThal → lHipp (unique)
+    },
+    story: 'Sensory-driven thalamic inhibition is protective during external '
+         + 'stimulation — more bottom-up thalamic suppression means fewer symptoms '
+         + '(β = −0.08 / −0.11). The thalamus is a target of hippocampal override, '
+         + 'not the primary driver.',
+  },
+  R3: {
+    label: 'R3 · MTG ↔ Hipp cross-talk',
+    sub: 'Internal vs external processing',
+    color: '#1D9E75',
+    conditions: ['music', 'rest'],
+    edges: {
+      music:      [[6,3],[2,7]],                  // lMTG → rHipp ; lHipp → rMTG
+      rest:       [[2,7],[3,6]],                  // lHipp → rMTG ; rHipp → lMTG
+      movie:      [[3,7]],                        // rHipp → rMTG
+      meditation: [[2,7],[3,6]],                  // lHipp → rMTG (inhib) ; rHipp → lMTG (excit)
+    },
+    story: 'Bidirectional, condition-dependent coupling. During auditory input '
+         + '(music) MTG suppresses hippocampus; at rest the direction reverses and '
+         + 'hippocampus drives MTG (lHipp inhibits, rHipp excites). Hallucinations '
+         + 'track hippocampal dominance over this circuit.',
+  },
+  R4: {
+    label: 'R4 · dlPFC asymmetry',
+    sub: 'Executive control is protective',
+    color: '#534AB7',
+    conditions: ['rest'],
+    edges: {
+      rest:       [[0,3],[0,5],[0,7],[1,3],[1,5],[1,7],[1,8],[1,0]],
+                  // ldlPFC → rHipp/rSOG/rMTG (inhib) ; rdlPFC → rHipp/rSOG/rMTG (excit) ;
+                  // rdlPFC → lThal ; rdlPFC → ldlPFC
+      meditation: [[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],[1,4],[1,5],[1,6],[1,7],[0,1],[1,0]],
+      movie:      [[1,0],[0,1],[0,6],[1,7],[1,9]],
+      music:      [[0,3],[1,2],[1,3]],
+    },
+    story: 'During internally-directed states (rest / meditation) dlPFC shows '
+         + 'lateralised control — left inhibits contralateral regions, right excites '
+         + 'them. The asymmetry reverses or vanishes during external stimulation. '
+         + 'Intact left-prefrontal inhibition of hippocampus is protective (β = −0.08).',
+  },
+};
+
+// ── UI configs ─────────────────────────────────────────────────────────────
+const CONDITIONS = [
+  { id:'rest',       label:'Rest',       sub:'eyes closed',    short:'rs', color:'#534AB7' },
+  { id:'music',      label:'Music',      sub:'audio stimuli',  short:'mu', color:'#1D9E75' },
+  { id:'movie',      label:'Movie',      sub:'visual stimuli', short:'mv', color:'#9A7820' },
+  { id:'meditation', label:'Meditation', sub:'guided',         short:'me', color:'#D85A30' },
+];
+const COND_BY_ID = Object.fromEntries(CONDITIONS.map(c => [c.id, c]));
+const VIEWS = [
+  { id:'change',    label:'Δ only',         desc:'post − pre Hz only' },
+  { id:'behav',     label:'β only',         desc:'ASC11 composite β only' },
+  { id:'mean_post', label:'post mean',      desc:'group-2 mean connectivity' },
+  { id:'overlay',   label:'Δ + β',          desc:'change AND beta layered together' },
+];
+const HEMIS = [
+  { id:'all',   label:'All' },
+  { id:'L',     label:'L↔L' },
+  { id:'R',     label:'R↔R' },
+  { id:'cross', label:'L↔R' },
+  { id:'ipsi',  label:'Ipsi' },
+];
+const LENSES = [
+  { id:'all',      label:'All',          sub:'no filter',           color:'#6B7280' },
+  { id:'memory',   label:'Memory',       sub:'Hipp connections',    color:'#D85A30' },
+  { id:'thalamic', label:'Thalamic',     sub:'Thal connections',    color:'#185FA5' },
+  { id:'frontal',  label:'Triple-net',   sub:'dlPFC connections',   color:'#534AB7' },
+  { id:'sensory',  label:'Sensory',      sub:'MTG / SOG',           color:'#1D9E75' },
+];
+
+// ── Rendering helpers ──────────────────────────────────────────────────────
+function passesHemi(i, j) {
+  const sa = NODE_POS[j].side, sb = NODE_POS[i].side; // j source → i target
+  if (STATE.hemisphere === 'all') return true;
+  if (STATE.hemisphere === 'L')   return sa === 'L' && sb === 'L';
+  if (STATE.hemisphere === 'R')   return sa === 'R' && sb === 'R';
+  if (STATE.hemisphere === 'cross') return sa !== sb;
+  if (STATE.hemisphere === 'ipsi')  return sa === sb;
+  return true;
+}
+
+function passesConnType(i, j) {
+  if (i === j)                                  return STATE.showSelf;
+  if (CLUSTER_OF[i] === CLUSTER_OF[j])          return STATE.showContra;
+  return true;
+}
+
+function passesResult(condId, i_tgt, j_src) {
+  // When a curated main result is active, keep only its connections.
+  if (!STATE.result) return true;
+  const res = RESULTS[STATE.result];
+  const spec = res.edges[condId];
+  if (!spec) return false;            // condition not part of this result
+  for (const e of spec) {
+    if (Array.isArray(e)) {
+      if (e[0] === j_src && e[1] === i_tgt) return true;   // [source, target]
+    } else if (e.srcWild !== undefined) {
+      if (e.srcWild === j_src) return true;                // all outgoing from node
+    } else if (e.tgtWild !== undefined) {
+      if (e.tgtWild === i_tgt) return true;                // all incoming to node
+    }
+  }
+  return false;
+}
+
+function passesLens(i, j) {
+  if (STATE.lens === 'all') return true;
+  // either endpoint matches the lens region
+  const isHipp  = idx => idx===2||idx===3;
+  const isThal  = idx => idx===8||idx===9;
+  const isFront = idx => idx===0||idx===1;
+  const isSens  = idx => idx===4||idx===5||idx===6||idx===7;
+  if (STATE.lens === 'memory')   return isHipp(i)  || isHipp(j);
+  if (STATE.lens === 'thalamic') return isThal(i)  || isThal(j);
+  if (STATE.lens === 'frontal')  return isFront(i) || isFront(j);
+  if (STATE.lens === 'sensory')  return isSens(i)  || isSens(j);
+  return true;
+}
+
+function edgeEndpoints(j_src, i_tgt, lateralOffset = 0) {
+  // Tangent points on each disc circumference. lateralOffset shifts the
+  // start/end perpendicular to the connection line, so that parallel
+  // co-directional edges sit side-by-side on the disc rim instead of overlapping.
+  const ax = NODE_POS[j_src].x, ay = NODE_POS[j_src].y;
+  const bx = NODE_POS[i_tgt].x, by = NODE_POS[i_tgt].y;
+  const dx = bx - ax, dy = by - ay;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 1) return null;
+  const ux = dx / dist, uy = dy / dist;
+  const px = -uy, py = ux;          // perpendicular unit
+  const ox = px * lateralOffset, oy = py * lateralOffset;
+  const sx = ax + ux * DISC_R + ox;
+  const sy = ay + uy * DISC_R + oy;
+  const tx = bx - ux * (DISC_R + 4) + ox;
+  const ty = by - uy * (DISC_R + 4) + oy;
+  return { sx, sy, tx, ty, dist, ux, uy, px, py };
+}
+
+function bezierPath(e, perpOffset) {
+  // Quadratic Bezier with control point offset perpendicular to the chord.
+  // Caller provides signed perpOffset (px) — positive bows one way, negative the other.
+  const mx = (e.sx + e.tx) / 2;
+  const my = (e.sy + e.ty) / 2;
+  const cx = mx + e.px * perpOffset;
+  const cy = my + e.py * perpOffset;
+  return {
+    d: `M ${e.sx.toFixed(1)} ${e.sy.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${e.tx.toFixed(1)} ${e.ty.toFixed(1)}`,
+    cx, cy,
+  };
+}
+
+function bezierPoint(e, ctrl, t) {
+  // Quadratic Bezier evaluation at parameter t ∈ [0,1].
+  const u = 1 - t;
+  return {
+    x: u*u*e.sx + 2*u*t*ctrl.cx + t*t*e.tx,
+    y: u*u*e.sy + 2*u*t*ctrl.cy + t*t*e.ty,
+  };
+}
+
+// ── Render guide ring + nodes ──────────────────────────────────────────────
+function renderGroups() {
+  const layer = document.getElementById('groups-layer');
+  layer.innerHTML = '';
+  // Faint guide ring through the cluster centers.
+  const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  ring.setAttribute('cx', RING_CX);
+  ring.setAttribute('cy', RING_CY);
+  ring.setAttribute('r', RING_R);
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', '#E5E7EB');
+  ring.setAttribute('stroke-width', '1');
+  ring.setAttribute('stroke-dasharray', '3,4');
+  layer.appendChild(ring);
+}
+
+function renderNodes() {
+  const layer = document.getElementById('nodes-layer');
+  const lblLayer = document.getElementById('cluster-labels');
+  layer.innerHTML = '';
+  lblLayer.innerHTML = '';
+
+  for (const cl of CLUSTER_CONFIG) {
+    // Outward direction from ring center → push label away from inside.
+    const dx = cl.cx - RING_CX, dy = cl.cy - RING_CY;
+    const dlen = Math.hypot(dx, dy) || 1;
+    const ox = dx / dlen, oy = dy / dlen;
+    const lblX = cl.cx + ox * (DISC_R + 14);
+    const lblY = cl.cy + oy * (DISC_R + 14) + 4; // +4 baseline correction
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+    lbl.setAttribute('x', lblX);
+    lbl.setAttribute('y', lblY);
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('font-size','12');
+    lbl.setAttribute('font-weight','700');
+    lbl.setAttribute('font-family','Source Sans 3, sans-serif');
+    lbl.setAttribute('fill', cl.color);
+    lbl.textContent = cl.name;
+    lblLayer.appendChild(lbl);
+
+    for (const sideKey of ['L','R']) {
+      const idx = sideKey === 'L' ? cl.L_idx : cl.R_idx;
+      const pos = NODE_POS[idx];
+      const grp = document.createElementNS('http://www.w3.org/2000/svg','g');
+      grp.setAttribute('class','node-shape');
+      grp.setAttribute('id', `node-${idx}`);
+      grp.addEventListener('click', () => onNodeClick(idx));
+
+      const disc = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      disc.setAttribute('cx', pos.x);
+      disc.setAttribute('cy', pos.y);
+      disc.setAttribute('r', DISC_R);
+      const fillCol = sideKey === 'L'
+        ? `color-mix(in srgb, ${cl.color} 18%, #fff)`
+        : `color-mix(in srgb, ${cl.color} 30%, #fff)`;
+      disc.setAttribute('fill', fillCol);
+      disc.setAttribute('stroke', cl.color);
+      disc.setAttribute('stroke-width', sideKey === 'L' ? '1.6' : '2');
+      disc.setAttribute('opacity', '0.92');
+      grp.appendChild(disc);
+
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', pos.x);
+      txt.setAttribute('y', pos.y + 4);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('font-size','13');
+      txt.setAttribute('font-weight','700');
+      txt.setAttribute('font-family','Source Sans 3, sans-serif');
+      txt.setAttribute('fill', cl.color);
+      txt.setAttribute('pointer-events','none');
+      txt.textContent = sideKey;
+      grp.appendChild(txt);
+
+      layer.appendChild(grp);
+    }
+  }
+}
+
+// ── Render edges ───────────────────────────────────────────────────────────
+function buildEdgeList() {
+  // Returns array of {i, j, val, kind, pp, condition}
+  const list = [];
+  for (const condId of STATE.conditions) {
+    const cd = window.PSI_DATA.conditions[condId];
+    const addFrom = (mat, pp, kind) => {
+      for (let i = 0; i < ROIS.length; i++) {
+        for (let j = 0; j < ROIS.length; j++) {
+          if (i === j) continue;
+          const v = mat[i][j];
+          if (Math.abs(v) < 1e-6) continue;
+          if (!passesResult(condId, i, j)) continue;
+          if (!passesConnType(i, j)) continue;
+          if (!passesHemi(i, j)) continue;
+          if (!passesLens(i, j)) continue;
+          list.push({ i, j, val: v, kind, pp: pp ? pp[i][j] : 1.0, condition: condId });
+        }
+      }
+    };
+    if (STATE.view === 'change')         addFrom(cd.change_Ep,    cd.change_Pp, 'change');
+    else if (STATE.view === 'behav')     addFrom(cd.behav_Ep,     cd.behav_Pp,  'behav');
+    else if (STATE.view === 'mean_post') addFrom(cd.mean_post_Ep, null,         'change');
+    else if (STATE.view === 'overlay') {
+      addFrom(cd.change_Ep, cd.change_Pp, 'change');
+      addFrom(cd.behav_Ep,  cd.behav_Pp,  'behav');
+    }
+  }
+  return list;
+}
+
+// ── Palette definitions ─────────────────────────────────────────────────────
+// Per-view paper palettes (single-condition mode). Mirrors the heatmaps in
+// the original PEB matrix figures.
+//   Δ change : PRGn         purple (+) / green  (−)
+//   β behav  : PuOr_r       gold   (+) / purple (−)
+//   post mean: RdBu_r       red    (+) / blue   (−)
+const PAPER_PALETTE = {
+  change:    { pos: '#762A83', neg: '#1B7837', rgbPos: '118, 42,131', rgbNeg: '27,120, 55' },
+  behav:     { pos: '#B58900', neg: '#4A1486', rgbPos: '181,137,  0', rgbNeg: '74, 20,134' },
+  mean_post: { pos: '#B22222', neg: '#1F4E79', rgbPos: '178, 34, 34', rgbNeg: '31, 78,121' },
+};
+// Per-condition diverging palettes (multi-condition mode). Warm = excit (+),
+// cool = inhib (−), both within the condition's hue family.
+const COND_PALETTE = {
+  rest:       { pos: '#534AB7', neg: '#B5B0E0' },
+  music:      { pos: '#1D9E75', neg: '#9DD8C0' },
+  movie:      { pos: '#B58900', neg: '#E5D38B' },
+  meditation: { pos: '#D85A30', neg: '#F2C0AB' },
+};
+
+function viewPalette(viewId, kind) {
+  // 'overlay' uses the kind to pick the right palette
+  if (viewId === 'overlay') return PAPER_PALETTE[kind === 'behav' ? 'behav' : 'change'];
+  return PAPER_PALETTE[viewId] || PAPER_PALETTE.change;
+}
+
+// Style for an edge given multi-cond mode + kind + sign.
+function edgeStyle(e, multiCond) {
+  const isPos = e.val > 0;
+  if (multiCond) {
+    const p = COND_PALETTE[e.condition];
+    return {
+      stroke: isPos ? p.pos : p.neg,
+      marker: 'url(#arr-flex)',
+      dash:   e.kind === 'behav' ? '5,3' : '',
+      width:  1.0 + Math.min(Math.abs(e.val) * (e.kind === 'behav' ? 14 : 7), 4),
+    };
+  }
+  // Single-condition mode: paper palette by view × sign.
+  const pal = viewPalette(STATE.view, e.kind);
+  return {
+    stroke: isPos ? pal.pos : pal.neg,
+    marker: 'url(#arr-flex)',
+    dash:   e.kind === 'behav' ? '5,3' : '',
+    width:  1.0 + Math.min(Math.abs(e.val) * (e.kind === 'behav' ? 14 : 7), 4),
+  };
+}
+
+function renderEdges() {
+  const layer = document.getElementById('edges-layer');
+  layer.innerHTML = '';
+  const edges = buildEdgeList();
+  const multiCond = STATE.conditions.length > 1;
+
+  // Bucket by directional source→target so co-directional parallel edges
+  // (overlay layers / multiple conditions) can be spread perpendicular to
+  // the chord. Anti-parallel edges (i→j and j→i) stay separate buckets and
+  // their natural perpendicular vectors point in opposite directions, so
+  // they auto-mirror without any extra sign flip.
+  const dirBuckets = new Map();
+  for (const e of edges) {
+    const key = `${e.j}->${e.i}`;
+    if (!dirBuckets.has(key)) dirBuckets.set(key, []);
+    dirBuckets.get(key).push(e);
+  }
+
+  const PERP_BASE   = 22; // base curve bow
+  const PERP_STEP   = 14; // additional offset per parallel edge
+  const LATERAL_STEP = 8; // disc-rim stagger when many parallel edges
+
+  for (const [key, bucket] of dirBuckets.entries()) {
+    const N = bucket.length;
+    bucket.forEach((e, k) => {
+      // Stagger from -(N-1)/2 .. +(N-1)/2
+      const offRank = k - (N - 1) / 2;
+      // For overlay (Δ + β) on same direction: change goes one way, behav the other.
+      // We use bucket order, but ensure visual separation regardless.
+      const lateral = N > 1 ? offRank * LATERAL_STEP : 0;
+      const ep = edgeEndpoints(e.j, e.i, lateral);
+      if (!ep) return;
+      const perp = (N > 1)
+        ? offRank * PERP_STEP + (offRank >= 0 ? PERP_BASE : -PERP_BASE)
+        : PERP_BASE;
+      const path = bezierPath(ep, perp);
+
+      const grp = document.createElementNS('http://www.w3.org/2000/svg','g');
+      grp.setAttribute('class','edge-grp');
+
+      const st = edgeStyle(e, multiCond);
+      const pathEl = document.createElementNS('http://www.w3.org/2000/svg','path');
+      pathEl.setAttribute('d', path.d);
+      pathEl.setAttribute('fill','none');
+      pathEl.setAttribute('class','edge-line');
+      pathEl.setAttribute('stroke', st.stroke);
+      pathEl.setAttribute('stroke-width', st.width);
+      if (st.dash) pathEl.setAttribute('stroke-dasharray', st.dash);
+      pathEl.setAttribute('marker-end', st.marker);
+      pathEl.setAttribute('opacity','0.85');
+      pathEl.style.cursor = 'pointer';
+      grp.appendChild(pathEl);
+
+      // Place label at t=0.32 along the curve (closer to source) and push
+      // it perpendicular further out, away from the path. Stagger by parallel
+      // index so labels do not stack.
+      const t = 0.32 + (offRank * 0.06);
+      const pt = bezierPoint(ep, path, Math.max(0.15, Math.min(0.7, t)));
+      const labelOff = (perp >= 0 ? 1 : -1) * (10 + Math.abs(offRank) * 4);
+      const lx = pt.x + ep.px * labelOff;
+      const ly = pt.y + ep.py * labelOff;
+
+      const lbl = document.createElementNS('http://www.w3.org/2000/svg','text');
+      lbl.setAttribute('x', lx);
+      lbl.setAttribute('y', ly + 3);
+      lbl.setAttribute('text-anchor','middle');
+      lbl.setAttribute('font-size','9');
+      lbl.setAttribute('font-weight','700');
+      lbl.setAttribute('font-family','STIX Two Text, Georgia, serif');
+      lbl.setAttribute('fill', st.stroke);
+      lbl.setAttribute('pointer-events','none');
+      const sign = e.val >= 0 ? '+' : '';
+      const tag = multiCond ? `${COND_BY_ID[e.condition].short}:` : '';
+      lbl.textContent = `${tag}${sign}${e.val.toFixed(2)}`;
+      // White outline behind label for readability
+      const halo = lbl.cloneNode(true);
+      halo.setAttribute('fill','#fff');
+      halo.setAttribute('stroke','#fff');
+      halo.setAttribute('stroke-width','3');
+      halo.setAttribute('opacity','0.85');
+      grp.appendChild(halo);
+      grp.appendChild(lbl);
+
+      grp.addEventListener('click', () => onEdgeClick(e));
+      layer.appendChild(grp);
+    });
+  }
+
+  const condStr = STATE.conditions.length === 1
+    ? STATE.conditions[0]
+    : `${STATE.conditions.length} cond`;
+  document.getElementById('counts').textContent =
+    `${edges.length} edges · ${condStr} · ${STATE.view}`;
+}
+
+// ── Matrix renderer (bottom) ───────────────────────────────────────────────
+function cellBg(val, scale, palId) {
+  if (Math.abs(val) < 1e-6) return '#F3F4F6';
+  const p = PAPER_PALETTE[palId] || PAPER_PALETTE.change;
+  const norm = Math.min(Math.abs(val) / scale, 1);
+  const a = (0.15 + norm * 0.65).toFixed(2);
+  return val > 0 ? `rgba(${p.rgbPos},${a})` : `rgba(${p.rgbNeg},${a})`;
+}
+function cellTxt(val) {
+  if (Math.abs(val) < 1e-6) return '';
+  return (val > 0 ? '+' : '') + val.toFixed(2);
+}
+function cellFg(val, scale) {
+  if (Math.abs(val) < 1e-6) return '#9CA3AF';
+  return Math.abs(val) / scale > 0.55 ? '#fff' : '#1F2937';
+}
+
+function renderMatrices() {
+  const area = document.getElementById('matrix-area');
+  area.innerHTML = '';
+  const condId = STATE.conditions[0]; // primary condition for matrix display
+  const cd = window.PSI_DATA.conditions[condId];
+
+  const tagSuffix = STATE.conditions.length > 1
+    ? ` (${condId} — primary of ${STATE.conditions.length})`
+    : ` (${condId})`;
+  const blocks = [
+    { id:'change',    label:'Δ post − pre (Hz)' + tagSuffix, Ep: cd.change_Ep,    scale: 0.4, color: PAPER_PALETTE.change.pos,    palId: 'change'    },
+    { id:'behav',     label:'β ASC11 composite' + tagSuffix, Ep: cd.behav_Ep,     scale: 0.2, color: PAPER_PALETTE.behav.pos,     palId: 'behav'     },
+    { id:'mean_post', label:'mean post-dose'    + tagSuffix, Ep: cd.mean_post_Ep, scale: 0.5, color: PAPER_PALETTE.mean_post.pos, palId: 'mean_post' },
+  ];
+
+  for (const b of blocks) {
+    const block = document.createElement('div');
+    block.className = 'matrix-block';
+    block.style.setProperty('--mc', b.color);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'matrix-block-label';
+    lbl.style.color = b.color;
+    lbl.textContent = b.label;
+    block.appendChild(lbl);
+
+    const tbl = document.createElement('table');
+    tbl.className = 'mtbl';
+
+    const hdr = document.createElement('tr');
+    const blank = document.createElement('th'); blank.className = 'col-hdr';
+    blank.textContent = 'from→to'; blank.style.transform = 'none'; blank.style.height = '24px';
+    blank.style.fontSize = '8px'; blank.style.color = '#9CA3AF';
+    hdr.appendChild(blank);
+    ROIS.forEach(r => {
+      const th = document.createElement('th');
+      th.className = 'col-hdr';
+      th.textContent = r;
+      hdr.appendChild(th);
+    });
+    tbl.appendChild(hdr);
+
+    for (let i = 0; i < ROIS.length; i++) {
+      const tr = document.createElement('tr');
+      const rh = document.createElement('th');
+      rh.className = 'row-hdr';
+      rh.textContent = ROIS[i];
+      tr.appendChild(rh);
+      for (let j = 0; j < ROIS.length; j++) {
+        const v = b.Ep[i][j];
+        const td = document.createElement('td');
+        td.className = 'mcell';
+        td.style.background = cellBg(v, b.scale, b.palId);
+        td.style.color = cellFg(v, b.scale);
+        td.textContent = cellTxt(v);
+        const dimmed = v !== 0 && (!passesHemi(i, j) || !passesLens(i, j) || !passesConnType(i, j)
+          || (STATE.result && !passesResult(condId, i, j)));
+        if (dimmed) td.classList.add('muted');
+        td.title = `${ROIS[j]} → ${ROIS[i]} : ${v.toFixed(3)}`;
+        td.addEventListener('click', () => {
+          if (Math.abs(v) > 1e-6) onEdgeClick({ i, j, val: v, kind: b.id === 'behav' ? 'behav' : 'change', pp: 1 });
+        });
+        tr.appendChild(td);
+      }
+      tbl.appendChild(tr);
+    }
+
+    block.appendChild(tbl);
+    area.appendChild(block);
+  }
+}
+
+// ── Top-edges sidebar list ─────────────────────────────────────────────────
+function renderTopEdges() {
+  const el = document.getElementById('top-edges');
+  const edges = buildEdgeList();
+  edges.sort((a, b) => Math.abs(b.val) - Math.abs(a.val));
+  const top = edges.slice(0, 12);
+  if (top.length === 0) {
+    el.innerHTML = '<div style="color:#9CA3AF;font-size:11px">No edges match current filters.</div>';
+    return;
+  }
+  const multi = STATE.conditions.length > 1;
+  el.innerHTML = top.map(e => {
+    const sym = e.kind === 'change' ? 'Δ' : 'β';
+    const cls = e.val > 0 ? 'pos' : 'neg';
+    const sign = e.val > 0 ? '+' : '';
+    const tag = multi
+      ? `<span style="display:inline-block;width:18px;font-size:9px;font-weight:700;color:${COND_BY_ID[e.condition].color};text-transform:uppercase">${COND_BY_ID[e.condition].short}</span>`
+      : '';
+    return `<div class="er">
+      ${tag}
+      <span class="er-arrow"><span class="sym">${ROIS[e.j]} → ${ROIS[e.i]}</span></span>
+      <span class="er-val ${cls}">${sym} ${sign}${e.val.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Click handlers ─────────────────────────────────────────────────────────
+function onEdgeClick(e) {
+  STATE.selectedEdge = e;
+  // For each currently active condition, show Δ / β / post-mean for this edge.
+  const rows = STATE.conditions.map(condId => {
+    const cd = window.PSI_DATA.conditions[condId];
+    const ch_v  = cd.change_Ep[e.i][e.j];
+    const ch_pp = cd.change_Pp[e.i][e.j];
+    const bh_v  = cd.behav_Ep[e.i][e.j];
+    const bh_pp = cd.behav_Pp[e.i][e.j];
+    const post  = cd.mean_post_Ep[e.i][e.j];
+    const sigCh = ch_pp >= 0.99 ? '✓' : `Pp=${ch_pp.toFixed(2)}`;
+    const sigB  = bh_pp >= 0.99 ? '✓' : (Math.abs(bh_v) > 1e-6 ? `Pp=${bh_pp.toFixed(2)}` : '—');
+    return `
+      <div style="border-top:1px dashed #E5E7EB;padding-top:5px;margin-top:5px">
+        <div class="dim" style="font-weight:700;color:${COND_BY_ID[condId].color};text-transform:uppercase;letter-spacing:0.4px">${condId}</div>
+        <div>Δ: <span class="${ch_v >= 0 ? 'pos' : 'neg'} sym">${ch_v >= 0 ? '+' : ''}${ch_v.toFixed(3)}</span> Hz <span class="dim">(${sigCh})</span></div>
+        <div>post: <span class="sym">${post.toFixed(3)}</span> Hz</div>
+        <div>β: <span class="${bh_v >= 0 ? 'pos' : 'neg'} sym">${bh_v >= 0 ? '+' : ''}${bh_v.toFixed(3)}</span> <span class="dim">(${sigB})</span></div>
+      </div>`;
+  }).join('');
+  document.getElementById('info-content').innerHTML = `
+    <div class="ib-title">Connection</div>
+    <div class="ib-text">
+      <span class="sym" style="font-size:13px;font-weight:700">${ROIS[e.j]} → ${ROIS[e.i]}</span>
+      <div class="dim">FROM ${ROIS[e.j]} TO ${ROIS[e.i]}</div>
+      ${rows}
+    </div>`;
+}
+
+function onNodeClick(idx) {
+  const condId = STATE.conditions[0]; // primary condition
+  const cd = window.PSI_DATA.conditions[condId];
+  const inMat = STATE.view === 'behav' ? cd.behav_Ep : cd.change_Ep;
+  const sym = STATE.view === 'behav' ? 'β' : 'Δ';
+  const aff = [], eff = [];
+  for (let k = 0; k < ROIS.length; k++) {
+    if (k === idx) continue;
+    const vIn  = inMat[idx][k];
+    const vOut = inMat[k][idx];
+    if (Math.abs(vIn)  > 1e-6) aff.push({ name: ROIS[k], v: vIn  });
+    if (Math.abs(vOut) > 1e-6) eff.push({ name: ROIS[k], v: vOut });
+  }
+  aff.sort((a,b) => Math.abs(b.v) - Math.abs(a.v));
+  eff.sort((a,b) => Math.abs(b.v) - Math.abs(a.v));
+  const fmt = a => `<div class="er"><span class="er-arrow sym">${a.name}</span><span class="er-val ${a.v>=0?'pos':'neg'}">${sym} ${a.v>=0?'+':''}${a.v.toFixed(2)}</span></div>`;
+  document.getElementById('info-content').innerHTML = `
+    <div class="ib-title">${ROIS[idx]} — ${condId} · ${STATE.view}</div>
+    <div class="ib-text">
+      <div class="dim" style="margin-bottom:4px">Afferents (sources → ${ROIS[idx]}):</div>
+      <div class="edge-list">${aff.map(fmt).join('') || '<div class="dim">none</div>'}</div>
+      <div class="dim" style="margin:6px 0 4px">Efferents (${ROIS[idx]} → targets):</div>
+      <div class="edge-list">${eff.map(fmt).join('') || '<div class="dim">none</div>'}</div>
+    </div>`;
+}
+
+// ── UI builders ────────────────────────────────────────────────────────────
+function selectResult(rid) {
+  // Toggle a curated main result. Selecting one auto-configures the view so the
+  // poster's change + β columns both show, with no lens/hemisphere masking.
+  if (STATE.result === rid) {           // clicking the active result clears it
+    STATE.result = null;
+    refresh();
+    return;
+  }
+  const res = RESULTS[rid];
+  STATE.result     = rid;
+  STATE.conditions = [...res.conditions];
+  STATE.view       = 'overlay';         // Δ + β layered, matching the poster table
+  STATE.hemisphere = 'all';
+  STATE.lens       = 'all';
+  STATE.showContra = true;              // dlPFC L↔R edges are contralateral same-cluster
+  refresh();
+  // Show the result's narrative in the info panel.
+  document.getElementById('info-content').innerHTML = `
+    <div class="ib-title" style="color:${res.color}">${res.label}</div>
+    <div class="ib-text"><span class="dim" style="font-style:italic">${res.sub}</span><br><br>${res.story}</div>`;
+}
+
+function buildSidebar() {
+  // main-result cards (single-select; click the active one again to clear)
+  const rcc = document.getElementById('result-cards');
+  rcc.innerHTML = '';
+  for (const [rid, res] of Object.entries(RESULTS)) {
+    const btn = document.createElement('button');
+    const active = STATE.result === rid;
+    btn.className = 'cond-card' + (active ? ' active' : '');
+    btn.style.setProperty('--c', res.color);
+    btn.innerHTML = `
+      <div class="cc-hd">
+        <span class="cc-tag">${rid}</span>
+        <span style="margin-left:auto;font-size:10px;color:${active ? res.color : '#9CA3AF'};font-weight:700">${active ? '●' : '○'}</span>
+      </div>
+      <div class="cc-label">${res.label.replace(/^R\d+ · /, '')}</div>
+      <div class="cc-sub">${res.sub}</div>`;
+    btn.addEventListener('click', () => selectResult(rid));
+    rcc.appendChild(btn);
+  }
+  const rhelp = document.createElement('div');
+  rhelp.style.cssText = 'font-size:10.5px;color:#9CA3AF;line-height:1.4;padding:2px 4px 0;font-style:italic';
+  rhelp.textContent = STATE.result
+    ? 'Showing curated connections only. Click the active result to clear and explore freely.'
+    : 'Click a result to highlight only its poster connections (Δ + β across its conditions).';
+  rcc.appendChild(rhelp);
+
+  // condition cards (multi-select: click toggles membership; min 1 enforced)
+  const ccc = document.getElementById('cond-cards');
+  ccc.innerHTML = '';
+  for (const c of CONDITIONS) {
+    const btn = document.createElement('button');
+    const active = STATE.conditions.includes(c.id);
+    btn.className = 'cond-card' + (active ? ' active' : '');
+    btn.style.setProperty('--c', c.color);
+    btn.innerHTML = `
+      <div class="cc-hd">
+        <span class="cc-tag">${c.id}</span>
+        <span style="margin-left:auto;font-size:10px;color:${active ? c.color : '#9CA3AF'};font-weight:700">${active ? '●' : '○'}</span>
+      </div>
+      <div class="cc-label">${c.label}</div>
+      <div class="cc-sub">${c.sub}</div>`;
+    btn.addEventListener('click', () => {
+      // Toggle membership; never drop below 1 active.
+      if (STATE.conditions.includes(c.id)) {
+        if (STATE.conditions.length > 1) {
+          STATE.conditions = STATE.conditions.filter(x => x !== c.id);
+        }
+      } else {
+        STATE.conditions = [...STATE.conditions, c.id];
+      }
+      refresh();
+    });
+    ccc.appendChild(btn);
+  }
+  // help line
+  const help = document.createElement('div');
+  help.style.cssText = 'font-size:10.5px;color:#9CA3AF;line-height:1.4;padding:2px 4px 0;font-style:italic';
+  help.textContent = 'Click to toggle. Multiple active = compare overlay (labels tagged rs/mu/mv/me).';
+  ccc.appendChild(help);
+
+  // view buttons
+  const vb = document.getElementById('view-buttons');
+  vb.innerHTML = '';
+  for (const v of VIEWS) {
+    const b = document.createElement('button');
+    b.className = 'tg-btn' + (STATE.view === v.id ? ' active' : '');
+    b.style.setProperty('--c', '#534AB7');
+    b.textContent = v.label;
+    b.title = v.desc;
+    b.addEventListener('click', () => { STATE.view = v.id; refresh(); });
+    vb.appendChild(b);
+  }
+  // hemi buttons
+  const hb = document.getElementById('hemi-buttons');
+  hb.innerHTML = '';
+  for (const h of HEMIS) {
+    const b = document.createElement('button');
+    b.className = 'tg-btn' + (STATE.hemisphere === h.id ? ' active' : '');
+    b.style.setProperty('--c', '#185FA5');
+    b.textContent = h.label;
+    b.addEventListener('click', () => { STATE.hemisphere = h.id; refresh(); });
+    hb.appendChild(b);
+  }
+  // connection-type toggles (self / contralateral same-ROI)
+  const cb = document.getElementById('conntype-buttons');
+  cb.innerHTML = '';
+  const connToggles = [
+    { id: 'showSelf',   label: 'Self',   desc: 'A(i,i) — diagonal (matrix only)' },
+    { id: 'showContra', label: 'Contra', desc: 'L↔R between two halves of the same ROI' },
+  ];
+  for (const t of connToggles) {
+    const b = document.createElement('button');
+    const on = STATE[t.id];
+    b.className = 'tg-btn' + (on ? ' active' : '');
+    b.style.setProperty('--c', '#185FA5');
+    b.textContent = (on ? '✓ ' : '○ ') + t.label;
+    b.title = t.desc + (on ? ' — currently shown' : ' — currently hidden');
+    b.addEventListener('click', () => { STATE[t.id] = !STATE[t.id]; refresh(); });
+    cb.appendChild(b);
+  }
+
+  // lens buttons
+  const lb = document.getElementById('lens-buttons');
+  lb.innerHTML = '';
+  for (const l of LENSES) {
+    const b = document.createElement('button');
+    b.className = 'lens-btn' + (STATE.lens === l.id ? ' active' : '');
+    b.style.setProperty('--c', l.color);
+    b.innerHTML = `${l.label}<span class="lb-sub">${l.sub}</span>`;
+    b.addEventListener('click', () => { STATE.lens = l.id; refresh(); });
+    lb.appendChild(b);
+  }
+}
+
+function renderLegend() {
+  const el = document.getElementById('legend-content');
+  const multi = STATE.conditions.length > 1;
+  let rows = '';
+  if (multi) {
+    rows += '<div style="font-size:10px;color:#6B7280;margin-bottom:3px">Multi-condition: condition hue + warm/cool sign</div>';
+    for (const c of CONDITIONS) {
+      if (!STATE.conditions.includes(c.id)) continue;
+      const p = COND_PALETTE[c.id];
+      rows += `
+        <div class="legend-row">
+          <span class="legend-line" style="background:${p.pos}"></span>
+          <span class="legend-line" style="background:${p.neg}"></span>
+          <span style="font-weight:600;color:${p.pos}">${c.label}</span>
+          <span class="dim" style="color:#9CA3AF;font-size:10px">+ / −</span>
+        </div>`;
+    }
+    rows += `<div class="legend-row" style="margin-top:5px"><span class="legend-line" style="background:#888"></span> solid = Δ &nbsp; <span class="legend-line" style="border-top:2.5px dashed #888;background:none"></span> dashed = β</div>`;
+  } else {
+    const view = STATE.view;
+    if (view === 'change' || view === 'overlay') {
+      const p = PAPER_PALETTE.change;
+      rows += `<div class="legend-row"><span class="legend-line" style="background:${p.pos}"></span> Δ + (excit) <span class="dim" style="color:#9CA3AF;font-size:10px">PRGn</span></div>`;
+      rows += `<div class="legend-row"><span class="legend-line" style="background:${p.neg}"></span> Δ − (inhib)</div>`;
+    }
+    if (view === 'behav' || view === 'overlay') {
+      const p = PAPER_PALETTE.behav;
+      rows += `<div class="legend-row"><span class="legend-line" style="background:${p.pos};border-top:2.5px dashed ${p.pos};height:0"></span> β + (excit) <span class="dim" style="color:#9CA3AF;font-size:10px">PuOr_r</span></div>`;
+      rows += `<div class="legend-row"><span class="legend-line" style="background:${p.neg};border-top:2.5px dashed ${p.neg};height:0"></span> β − (inhib)</div>`;
+    }
+    if (view === 'mean_post') {
+      const p = PAPER_PALETTE.mean_post;
+      rows += `<div class="legend-row"><span class="legend-line" style="background:${p.pos}"></span> + (excit) <span class="dim" style="color:#9CA3AF;font-size:10px">RdBu_r</span></div>`;
+      rows += `<div class="legend-row"><span class="legend-line" style="background:${p.neg}"></span> − (inhib)</div>`;
+    }
+  }
+  rows += '<div class="legend-row" style="margin-top:6px;font-size:10px;color:#9CA3AF">Width ∝ |value| · all edges Pp&gt;0.99</div>';
+  el.innerHTML = rows;
+}
+
+function updateModeIndicator() {
+  const tag = document.getElementById('tag-mode');
+  if (!tag) return;
+  const multi = STATE.conditions.length > 1;
+  if (multi) {
+    tag.textContent = `${STATE.conditions.length} cond · condition palette`;
+    tag.style.background = '#FEF3C7';
+    tag.style.color = '#92400E';
+  } else {
+    tag.textContent = 'paper palette';
+    tag.style.background = '#F3F4F6';
+    tag.style.color = '#534AB7';
+  }
+}
+
+function refresh() {
+  buildSidebar();
+  renderGroups();
+  renderNodes();
+  renderEdges();
+  renderMatrices();
+  renderTopEdges();
+  renderLegend();
+  updateModeIndicator();
+}
+
+// ── PNG export ─────────────────────────────────────────────────────────────
+function _exportFilename() {
+  const conds = STATE.conditions.length ? STATE.conditions.join('+') : 'none';
+  const parts = ['psi', conds, STATE.view, STATE.lens, STATE.hemisphere];
+  if (!STATE.showSelf)   parts.push('noself');
+  if (!STATE.showContra) parts.push('nocontra');
+  return parts.join('_') + '.png';
+}
+
+function exportDiagramPNG() {
+  const svg = document.getElementById('diagram-svg');
+  const status = document.getElementById('export-status');
+  if (!svg) return;
+  if (status) { status.textContent = 'Rendering…'; status.style.color = '#6B7280'; }
+
+  const vb = (svg.getAttribute('viewBox') || '0 0 760 520').split(/\s+/).map(Number);
+  const w = vb[2], h = vb[3];
+
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('width',  w);
+  clone.setAttribute('height', h);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+  // Opaque white background so PNG looks correct on slides.
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+  bg.setAttribute('width', w); bg.setAttribute('height', h);
+  bg.setAttribute('fill', '#ffffff');
+  clone.insertBefore(bg, clone.firstChild);
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const img = new Image();
+  img.onload = () => {
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale; canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(b => {
+      if (!b) {
+        if (status) { status.textContent = 'Export failed (canvas blob)'; status.style.color = '#B91C1C'; }
+        return;
+      }
+      const fname = _exportFilename();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = fname;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 50);
+      if (status) { status.textContent = 'Saved ' + fname; status.style.color = '#065F46'; }
+    }, 'image/png');
+  };
+  img.onerror = (e) => {
+    URL.revokeObjectURL(url);
+    console.error('PNG export failed', e);
+    if (status) { status.textContent = 'Export failed — see console'; status.style.color = '#B91C1C'; }
+  };
+  img.src = url;
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Deep-link a curated result via URL hash, e.g. …psilocybin_circuit_explorer.html#R2
+  const h = (location.hash || '').replace('#', '').toUpperCase();
+  if (RESULTS[h]) selectResult(h);
+  else refresh();
+  const btn = document.getElementById('btn-save-png');
+  if (btn) btn.addEventListener('click', exportDiagramPNG);
+});
+</script>
+</body>
+</html>

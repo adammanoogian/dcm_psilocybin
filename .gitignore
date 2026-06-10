@@ -93,3 +93,5 @@ cpc2025_rdcm_tutorial/
 *.tmp
 *.temp
 *~
+# Cygwin/MSYS crash dumps
+*.stackdump
